@@ -17,3 +17,13 @@
 backend/   # Django REST API
 frontend/  # React SPA
 docs/      # Architecture, diagrams, planning
+
+## Git Workflow
+
+- Never push directly to `main`.
+- For every task, create a branch: `THER-<issue-number>-short-description`
+  - Example: `THER-10-docker-setup`
+- Commit messages must start with Jira key:
+  - Example: `THER-10: add docker-compose.yml with backend/frontend/db services`
+- Open a Pull Request to merge into `main`.
+- At least 1 approval and passing CI are required before merging.
