@@ -17,3 +17,6 @@ build/
 # PyCharm / VSCode
 .idea/
 .vscode/
+
+# Django local database
+db.sqlite3
