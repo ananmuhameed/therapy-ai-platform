@@ -1,39 +1,28 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
-# --------------------------------------------
-# Simple UserManager for email authentication
-# --------------------------------------------
+# ---------- UserManager / User (يبقى كما هو) ----------
 class UserManager(BaseUserManager):
-
-    # Create normal user
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("Email is required")
-
         email = self.normalize_email(email)
-
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save()
         return user
 
-    # Create superuser (admin)
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-
         return self.create_user(email, password, **extra_fields)
 
 
-# --------------------------------------------
-
-# Custom User Model using email instead of username
 class User(AbstractUser):
-    username = None  # remove default username field
+    username = None
     email = models.EmailField(unique=True)
 
-    # keep a role flag only (no specialty/license here)
     is_therapist = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -42,42 +31,62 @@ class User(AbstractUser):
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 
-    objects = UserManager()  # <-- IMPORTANT
+    objects = UserManager()
 
     def __str__(self):
         return self.email
 
 
-class Therapist(User):
-    """
-    Multi-table inheritance: Therapist subclass of User.
-    Therapist holds therapist-specific fields (moved out of User).
-    """
-    specialty = models.CharField(max_length=255, blank=True)
+# ---------- TherapistProfile (OneToOne with User) ----------
+class TherapistProfile(models.Model):
+    # link to user (one-to-one)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="therapist_profile",
+    )
+
+    # fields from your schema
+    specialization = models.CharField(max_length=255, blank=True)  # specialization == specialty
     license_number = models.CharField(max_length=100, blank=True)
-    bio = models.TextField(blank=True)
-    is_licensed = models.BooleanField(default=False)
+    years_experience = models.IntegerField(null=True, blank=True)
+    clinic_name = models.CharField(max_length=255, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Therapist"
-        verbose_name_plural = "Therapists"
+        verbose_name = "Therapist Profile"
+        verbose_name_plural = "Therapist Profiles"
 
     def __str__(self):
-        return f"{self.email} (Therapist)"
+        return f"{self.user.email} - TherapistProfile"
 
 
-class Patient(User):
-    """
-    Patient subclass — inherits authentication fields from User.
-    """
-    dob = models.DateField(null=True, blank=True)
+# ---------- Patient (linked to TherapistProfile) ----------
+class Patient(models.Model):
+    # Option A: link to therapist profile (recommended)
+    therapist = models.ForeignKey(
+        TherapistProfile,
+        on_delete=models.CASCADE,
+        related_name="patients",
+    )
+
+    full_name = models.CharField(max_length=255)
     gender = models.CharField(max_length=20, blank=True)
-    medical_history = models.TextField(blank=True)
-    emergency_contact = models.CharField(max_length=200, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    contact_phone = models.CharField(max_length=30, blank=True)
+    contact_email = models.EmailField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Patient"
         verbose_name_plural = "Patients"
 
     def __str__(self):
-        return f"{self.email} (Patient)"
+        return f"{self.full_name} (Patient)"

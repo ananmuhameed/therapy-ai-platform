@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth import get_user_model
-from .models import Therapist, Patient
+from .models import TherapistProfile, Patient
 
 User = get_user_model()
 
@@ -16,15 +16,13 @@ except admin.sites.NotRegistered:
 class CustomUserAdmin(BaseUserAdmin):
     ordering = ["email"]
     list_display = ("email", "is_staff", "is_superuser", "is_therapist")
-
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal Info", {"fields": ("first_name", "last_name")}),
-        ("Therapist Info", {"fields": ("is_therapist",)}),  # avoid duplicate fields here
+        ("Flags", {"fields": ("is_therapist",)}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login",)}),
     )
-
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
@@ -32,15 +30,20 @@ class CustomUserAdmin(BaseUserAdmin):
         }),
     )
 
+@admin.register(TherapistProfile)
+class TherapistProfileAdmin(admin.ModelAdmin):
+    list_display = ("user_email", "specialization", "license_number", "clinic_name", "country", "city")
+    search_fields = ("user__email", "specialization", "license_number", "clinic_name")
 
-@admin.register(Therapist)
-class TherapistAdmin(admin.ModelAdmin):
-    # Therapist inherits fields from User, so use those directly.
-    list_display = ("email", "first_name", "is_licensed", "specialty")
-    search_fields = ("email", "specialty", "license_number")
-
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = "Email"
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display = ("email", "first_name", "dob")
-    search_fields = ("email",)
+    list_display = ("full_name", "therapist_email", "date_of_birth", "contact_email")
+    search_fields = ("full_name", "therapist__user__email", "contact_email")
+
+    def therapist_email(self, obj):
+        return obj.therapist.user.email
+    therapist_email.short_description = "Therapist Email"
