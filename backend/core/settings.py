@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -77,8 +77,12 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "therapy_db"),
+        "USER": os.environ.get("POSTGRES_USER", "therapy_user"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "therapy_pass"),
+        "HOST": os.environ.get("POSTGRES_HOST", "db"),  # service name in docker-compose
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 

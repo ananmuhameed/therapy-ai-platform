@@ -10,7 +10,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         # include custom fields you want users to submit at registration
-        fields = ["email", "password", "first_name", "last_name", "is_therapist", "specialty", "license_number"]
+        fields = ["email", "password", "first_name", "last_name", "is_therapist"]
 
     def create(self, validated_data):
         # Use set_password so hashing is applied
