@@ -2,9 +2,15 @@ FROM node:22
 
 WORKDIR /app
 
-COPY package.json package-lock.json* yarn.lock* ./
-RUN npm install || true
+# Install deps
+COPY package*.json ./
+RUN npm install
 
-COPY . /app/
+# Copy rest of the app
+COPY . .
 
-EXPOSE 3000
+# Vite dev server port
+EXPOSE 5173
+
+# Run Vite dev server in Docker
+CMD ["npm", "run", "dev", "--", "--host"]
