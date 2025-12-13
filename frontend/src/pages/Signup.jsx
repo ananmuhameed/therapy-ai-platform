@@ -1,64 +1,86 @@
-import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { FaCloud } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
-// import api from '../api'; // Axios instance imort when available
+import React, { useState } from "react";
+import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
+import { FaCloud } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+// import api from "../api/axiosInstance";
 
-const Signup = ({ onSwitchToLogin }) => {
+const Signup = () => {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: ''
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async () => {
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match!");
+  const handleSubmit = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+
+    setError("");
+    setMessage("");
+
+    const fullName = formData.fullName.trim();
+    const email = formData.email.trim();
+
+    if (!fullName || !email || !formData.password || !formData.confirmPassword) {
+      setError("Please fill all fields.");
       return;
     }
 
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match!");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      // TODO: Replace this with Axios call when available
-      // const response = await api.post('/signup/', {
-      //   email: formData.email,
-      //   password: formData.password
-      // });
+      // ✅ Backend-ready payload (snake_case)
+      // await api.post("/register/", { full_name: fullName, email, password: formData.password });
 
-      // if (response.status === 201 || response.status === 200) {
-      //   alert("Account created successfully!");
-      //   if (onSwitchToLogin) onSwitchToLogin();
-      // }
+      console.log("REGISTER FORM DATA (no backend yet):", {
+        full_name: fullName,
+        email,
+        password: formData.password,
+      });
 
-      // Temporary placeholder to avoid errors
-      console.log("Form data ready to be sent:", formData);
-      alert("Signup would be submitted now (Axios call commented).");
-
+      setMessage("Registration done. You can now log in.");
+      navigate("/login", { replace: true });
     } catch (err) {
-      console.error(err);
-      const errorMessage = err.response?.data
-        ? JSON.stringify(err.response.data)
-        : err.message;
-      alert("Signup failed: " + errorMessage);
+      setError("Signup failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-r from-[#395886] via-[#638ECB] to-[#8AAEE0]">
       <div className="w-full max-w-5xl bg-gradient-to-r from-[#395886] via-[#638ECB] to-[#8AAEE0] rounded-3xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
-
         {/* Left Side */}
         <div className="lg:w-1/2 p-10 lg:p-16 flex flex-col justify-center bg-gradient-to-r from-[#395886] via-[#638ECB] to-[#8AAEE0]">
           <h1 className="text-4xl lg:text-5xl font-bold mb-4 text-[#F0F3FA]">
             Join Our Platform
           </h1>
           <p className="text-base lg:text-lg text-[#ded8d7] leading-relaxed">
-            Join thousands of Therapists who trust our platform. Create your account in seconds and unlock all features.
+            Join thousands of therapists who trust our platform. Create your
+            account in seconds and unlock all features.
           </p>
         </div>
 
@@ -67,11 +89,32 @@ const Signup = ({ onSwitchToLogin }) => {
           <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-[#F0F3FA]">
             Create Account
           </h2>
-          <p className="text-base mb-8 text-[#8D8F8E]">
+          <p className="text-base mb-6 text-[#8D8F8E]">
             Fill in your details to get started
           </p>
 
+          {error && <p className="mb-4 text-red-500 font-medium">{error}</p>}
+          {message && <p className="mb-4 text-green-600 font-medium">{message}</p>}
+
           <div className="space-y-5">
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  autoComplete="name"
+                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 bg-[#5B687C] border-[#5B687C] text-[#dae2de] focus:outline-none focus:border-[#5B687C]"
+                  placeholder="Your full name"
+                />
+              </div>
+            </div>
 
             {/* Email */}
             <div>
@@ -79,55 +122,79 @@ const Signup = ({ onSwitchToLogin }) => {
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8D8F8E]">
-                  <Mail />
-                </div>
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  autoComplete="email"
                   className="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 bg-[#5B687C] border-[#5B687C] text-[#dae2de] focus:outline-none focus:border-[#5B687C]"
                   placeholder="you@example.com"
                 />
               </div>
             </div>
 
-            {/* Password & Confirm Password */}
-            {[
-              { label: 'Password', name: 'password', show: showPassword, toggle: () => setShowPassword(!showPassword) },
-              { label: 'Confirm Password', name: 'confirmPassword', show: showConfirmPassword, toggle: () => setShowConfirmPassword(!showConfirmPassword) }
-            ].map(field => (
-              <div key={field.name}>
-                <label className="block text-sm font-medium mb-2 text-[#dae2de]">
-                  {field.label}
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
-                  <input
-                    type={field.show ? 'text' : 'password'}
-                    name={field.name}
-                    value={formData[field.name]}
-                    onChange={handleChange}
-                    className="w-full pl-12 pr-12 py-3.5 rounded-xl border-2 bg-[#5B687C] border-[#5B687C] text-[#D4CDCB] focus:outline-none focus:border-[#5B687C]"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={field.toggle}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2"
-                  >
-                    {field.show ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  className="w-full pl-12 pr-12 py-3.5 rounded-xl border-2 bg-[#5B687C] border-[#5B687C] text-[#D4CDCB] focus:outline-none focus:border-[#5B687C]"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                >
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </button>
               </div>
-            ))}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  autoComplete="new-password"
+                  className="w-full pl-12 pr-12 py-3.5 rounded-xl border-2 bg-[#5B687C] border-[#5B687C] text-[#D4CDCB] focus:outline-none focus:border-[#5B687C]"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((s) => !s)}
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                >
+                  {showConfirmPassword ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
+            </div>
 
             <button
               onClick={handleSubmit}
-              className="w-full py-3.5 rounded-xl font-semibold bg-[#5B687C] text-[#D4CDCB] hover:bg-[#6e7b8c] transition-colors"
+              disabled={isSubmitting}
+              className="w-full py-3.5 rounded-xl font-semibold bg-[#5B687C] text-[#D4CDCB] hover:bg-[#6e7b8c] transition-colors disabled:opacity-60"
             >
-              Create Account
+              {isSubmitting ? "Creating..." : "Create Account"}
             </button>
           </div>
 
@@ -139,7 +206,11 @@ const Signup = ({ onSwitchToLogin }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <button className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]">
+            <button
+              type="button"
+              className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+            >
+              {/* Google SVG from your UI-rich version */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -149,11 +220,18 @@ const Signup = ({ onSwitchToLogin }) => {
               <span className="hidden sm:inline">Google</span>
             </button>
 
-            <button className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]">
-              <span className="hidden sm:inline"><FaCloud/> Cloud</span>
+            <button
+              type="button"
+              className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+            >
+              <FaCloud />
+              <span className="hidden sm:inline">Cloud</span>
             </button>
 
-            <button className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]">
+            <button
+              type="button"
+              className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+            >
               <Mail className="w-5 h-5" />
               <span className="hidden sm:inline">Email</span>
             </button>
@@ -161,11 +239,8 @@ const Signup = ({ onSwitchToLogin }) => {
 
           {/* Switch to Login */}
           <p className="mt-8 text-center text-[#8D8F8E]">
-            Already have an account?{' '}
-            <Link
-              to="./login"
-              className="font-semibold text-[#ebf2f5] hover:underline"
-            >
+            Already have an account?{" "}
+            <Link to="/login" className="font-semibold text-[#ebf2f5] hover:underline">
               Sign in
             </Link>
           </p>
