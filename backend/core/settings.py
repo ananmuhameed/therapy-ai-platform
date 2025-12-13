@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -39,8 +39,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "rest_framework_simplejwt",
-    "accounts",
+    "users.apps.UsersConfig",
+
 ]
 
 REST_FRAMEWORK = {
@@ -93,8 +93,12 @@ WSGI_APPLICATION = "core.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB", "therapy_db"),
+        "USER": os.environ.get("POSTGRES_USER", "therapy_user"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "therapy_pass"),
+        "HOST": os.environ.get("POSTGRES_HOST", "db"),  # service name in docker-compose
+        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -134,3 +138,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+}
+
+# Custom user model
+AUTH_USER_MODEL = "users.User"
