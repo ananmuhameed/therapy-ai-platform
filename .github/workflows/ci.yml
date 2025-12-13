@@ -52,10 +52,3 @@ jobs:
           else
             echo "No package.json found."
           fi
-      - name: Build frontend
-        run: |
-          if [ -f "package.json" ]; then
-            npm run build
-          else
-            echo "No package.json found."
-          fi
