@@ -4,25 +4,46 @@ from rest_framework import serializers
 User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
-    # receive plain password, write-only
-    password = serializers.CharField(write_only=True, min_length=8)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        style={'input_type': 'password'}
+    )
+    password_confirm = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+    first_name = serializers.CharField(required=True, allow_blank=False)
+    last_name = serializers.CharField(required=True, allow_blank=False)
 
     class Meta:
         model = User
-        # include custom fields you want users to submit at registration
-        fields = ["email", "password", "first_name", "last_name", "is_therapist"]
+        fields = ["id", "email", "first_name", "last_name", "password", "password_confirm"]
+
+    def validate_email(self, value):
+        value = value.lower()
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate(self, data):
+        if data['password'] != data['password_confirm']:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+        return data
 
     def create(self, validated_data):
-        # Use set_password so hashing is applied
-        password = validated_data.pop("password")
-        user = User(**validated_data)
-        user.set_password(password)
-        # If you want newly registered users to be staff by default set flags here (usually False)
-        user.save()
-        return user
+        password = validated_data.pop('password') # popped to manually hash it
+        validated_data.pop('password_confirm', None) # removed because it's not a model field, during save will cause error
+    
+        # **validated_data? unpack the dictionary into keyword arguments.
+        # validated_data = {
+        # "email": "therapist@example.com",
+        # "full_name": "Dr. Jane Doe",}
+    # expands to
+        # user = User(
+        # email="therapist@example.com",
+        # full_name="Dr. Jane Doe",)
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["id", "email", "first_name", "last_name", "is_therapist", "specialty"]
-        read_only_fields = ["id", "email"]
+        # Uses your UserManager => hashes password + normalizes email
+        user = User.objects.create_user(password=password, **validated_data)
+        return user
