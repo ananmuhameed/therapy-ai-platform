@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 import { FaCloud } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-// import api from "../api/axiosInstance";
+import api from "../api/axiosInstance";
+
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -52,23 +53,44 @@ const Signup = () => {
 
     setIsSubmitting(true);
     try {
-      // ✅ Backend-ready payload (snake_case)
-      // await api.post("/register/", { full_name: fullName, email, password: formData.password });
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  const first_name = parts[0] || "";
+  const last_name = parts.slice(1).join(" ") || "";
 
-      console.log("REGISTER FORM DATA (no backend yet):", {
-        full_name: fullName,
-        email,
-        password: formData.password,
-      });
+  if (!first_name || !last_name) {
+    setError("Please enter your full name (first and last).");
+    return;
+  }
 
-      setMessage("Registration done. You can now log in.");
-      navigate("/login", { replace: true });
-    } catch (err) {
-      setError("Signup failed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  await api.post("/auth/register/", {
+    first_name,
+    last_name,
+    email,
+    password: formData.password,
+    password_confirm: formData.confirmPassword,
+  });
+
+  setMessage("Registration done. You can now log in.");
+  navigate("/login", { replace: true });
+} catch (err) {
+  console.error(err);
+
+  //backend validation
+  const data = err?.response?.data;
+
+  let msg = "Signup failed. Please try again.";
+  if (data) {
+    if (typeof data === "string") msg = data;
+    else if (data.email) msg = Array.isArray(data.email) ? data.email[0] : String(data.email);
+    else if (data.password) msg = Array.isArray(data.password) ? data.password[0] : String(data.password);
+    else msg = JSON.stringify(data);
+  }
+
+  setError(msg);
+} finally {
+  setIsSubmitting(false);
+}};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-r from-[#395886] via-[#638ECB] to-[#8AAEE0]">

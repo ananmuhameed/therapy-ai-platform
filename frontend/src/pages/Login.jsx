@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { setAuth } from "../auth/storage";
-// import api from "../api/axiosInstance";
+import api from "../api/axiosInstance";
+
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,39 +21,45 @@ const Login = () => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async () => {
-    setError("");
+const handleSubmit = async () => {
+  setError("");
 
-    const email = formData.email.trim();
+  const email = formData.email.trim();
 
-    if (!email || !formData.password) {
-      setError("Please enter email and password.");
-      return;
-    }
+  if (!email || !formData.password) {
+    setError("Please enter email and password.");
+    return;
+  }
 
-    setIsSubmitting(true);
-    try {
-      // ✅ real backend later:
-      // const { data } = await api.post("/login/", { email, password: formData.password });
-      // setAuth({ accessToken: data.access, user: data.user });
-      // navigate("/dashboard", { replace: true });
+  setIsSubmitting(true);
+  try {
+    const { data } = await api.post("/auth/login/", {
+      email,
+      password: formData.password,
+    });
 
-      // Dummy auth (DEV ONLY)
-      setAuth({
-        accessToken: "DUMMY_TOKEN",
-        user: {
-          email,
-          full_name: "Demo User",
-        },
-      });
+    // Save tokens + user
+    setAuth({
+      accessToken: data.access,
+      refreshToken: data.refresh,
+      user: data.user,
+    });
 
-      navigate("/dashboard", { replace: true });
-    } catch (err) {
-      setError("Login failed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    navigate("/dashboard", { replace: true });
+  } catch (err) {
+    console.error(err);
+
+
+    const msg =
+      err?.response?.data?.detail ||
+      err?.response?.data?.non_field_errors?.[0] ||
+      "Login failed. Please check your credentials.";
+
+    setError(msg);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 lg:p-8 bg-gradient-to-r from-[#395886] via-[#638ECB] to-[#8AAEE0]">
