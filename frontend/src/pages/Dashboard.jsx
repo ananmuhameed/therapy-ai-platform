@@ -1,23 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axiosInstance";
 import { getUser, getAccessToken, clearAuth } from "../auth/storage";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
-  // 🔒 Route guard + user loading
   useEffect(() => {
     const token = getAccessToken();
 
     if (!token) {
-      // Not logged in → kick out
       navigate("/login", { replace: true });
       return;
     }
 
-    // For now (dummy auth), load user from storage
-    setUser(getUser());
+    //getting cached user
+    const cached = getUser();
+    if (cached) setUser(cached);
+
+    const loadMe = async () => {
+      try {
+        const { data } = await api.get("/auth/me/");
+        setUser(data);
+        localStorage.setItem("user", JSON.stringify(data));
+      } catch (err) {
+        console.error("Failed to load /auth/me:", err);
+        clearAuth();
+        navigate("/login", { replace: true });
+      }
+    };
+
+    loadMe();
   }, [navigate]);
 
   const handleLogout = () => {
