@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.core.exceptions import ValidationError
+
 
 
 class Patient(models.Model):
@@ -27,3 +29,10 @@ class Patient(models.Model):
 
     def __str__(self) -> str:
         return f"{self.full_name} (Therapist: {self.therapist_id})"
+    def clean(self):
+        if self.therapist and not getattr(self.therapist, "is_therapist", False):
+            raise ValidationError({"therapist": "Selected user is not a therapist."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
