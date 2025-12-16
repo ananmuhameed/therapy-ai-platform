@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.core.exceptions import ValidationError
+
 
 # ---------- UserManager / User  ----------
 class UserManager(BaseUserManager):
@@ -60,6 +62,13 @@ class TherapistProfile(models.Model):
     class Meta:
         verbose_name = "Therapist Profile"
         verbose_name_plural = "Therapist Profiles"
+        db_table = "therapist_profile"
+
 
     def __str__(self):
         return f"{self.user.email} - TherapistProfile"
+    
+    def clean(self):
+        if self.user and not self.user.is_therapist:
+            raise ValidationError("User must be a therapist to have a TherapistProfile.")
+

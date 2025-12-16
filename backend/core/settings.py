@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "users.apps.UsersConfig",
     "rest_framework_simplejwt",
+    "patients",
 ]
 
 REST_FRAMEWORK = {
