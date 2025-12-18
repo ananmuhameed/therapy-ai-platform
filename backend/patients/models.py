@@ -38,6 +38,11 @@ class Patient(models.Model):
         return super().save(*args, **kwargs)
 
 
+def validate_audio_extension(file):
+    valid_extensions = ['.mp3', '.wav', '.m4a']
+    if not any(file.name.lower().endswith(ext) for ext in valid_extensions):
+        raise ValidationError("Only mp3, wav, or m4a files are allowed.")
+
 class Session(models.Model):
     STATUS_CHOICES = [
         ("recorded", "Recorded"),
@@ -55,7 +60,10 @@ class Session(models.Model):
         on_delete=models.CASCADE,
         related_name="sessions",
     )
-    audio_file = models.FileField(upload_to="sessions/audio/")
+    audio_file = models.FileField(
+        upload_to="sessions/audio/",
+        validators=[validate_audio_extension],
+    )
     source = models.CharField(
         max_length=20,
         choices=SOURCE_CHOICES,
