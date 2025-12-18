@@ -36,3 +36,43 @@ class Patient(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class Session(models.Model):
+    STATUS_CHOICES = [
+        ("recorded", "Recorded"),
+        ("processing", "Processing"),
+        ("completed", "Completed"),
+    ]
+
+    SOURCE_CHOICES = [
+        ("upload", "Upload"),
+        ("record", "Record"),
+    ]
+
+    patient = models.ForeignKey(
+        Patient,
+        on_delete=models.CASCADE,
+        related_name="sessions",
+    )
+    audio_file = models.FileField(upload_to="sessions/audio/")
+    source = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+        default="upload",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="recorded",
+    )
+    session_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "session"
+        ordering = ["-session_date"]
+
+    def __str__(self):
+        return f"Session {self.id} - {self.patient.full_name}"
