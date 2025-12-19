@@ -1,0 +1,164 @@
+.ap-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ---------- Title ---------- */
+.ap-title {
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #3078e2, #8aaee0);
+  -webkit-background-clip: text;
+  color: transparent;
+  margin-bottom: 24px;
+}
+
+/* ---------- Form ---------- */
+.ap-form {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ap-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #666;
+}
+
+/* ---------- Inputs ---------- */
+.ap-form input,
+.ap-form select,
+.ap-form textarea {
+  background: #f5f5f5;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ap-form input::placeholder,
+.ap-form textarea::placeholder {
+  color: #727473;
+}
+
+/* ---------- PHONE ROW ---------- */
+.ap-phone {
+  display: flex;
+  gap: 10px;
+}
+
+/* fixed left */
+.ap-phone select {
+  width: 110px;
+  flex: 0 0 110px;
+}
+
+/* flexible right */
+.ap-phone input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- GENDER + DOB ROW ---------- */
+.ap-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+/* ensure children stretch */
+.ap-row select,
+.ap-row input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ---------- DATE INPUT FIX ---------- */
+.ap-date {
+  width: 100%;
+}
+
+.ap-date input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+/* ---------- Notes ---------- */
+.ap-form textarea {
+  min-height: 150px;
+  resize: none;
+}
+
+/* ---------- Button ---------- */
+.ap-form button {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(90deg, #3078e2, #8aaee0);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+/* Make select text start more to the left */
+.ap-form select {
+  padding: 12px 34px 12px 12px;  /* less left padding, keep room for arrow on right */
+  text-align: left;
+}
+
+/* Specifically tighten the country code select */
+.ap-phone select {
+  padding-left: 10px;            /* brings +20 closer to the left */
+  padding-right: 30px;           /* room for arrow */
+}
+
+/* Tighten gender select too */
+.ap-row select {
+  padding-left: 12px;
+  padding-right: 30px;
+}
+
+/* Remove weird native styling that adds extra spacing */
+.ap-form select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: none;        /* hide native arrow */
+}
+
+/* Add a custom arrow so it doesn't sit at the extreme edge */
+.ap-phone,
+.ap-row {
+  position: relative;
+}
+
+/* Custom arrow for phone select */
+.ap-phone label select,
+.ap-phone select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23727473' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center; /* NOT at the extreme right */
+  background-size: 16px 16px;
+}
+
+/* Same arrow for gender select */
+.ap-row select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23727473' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+}
