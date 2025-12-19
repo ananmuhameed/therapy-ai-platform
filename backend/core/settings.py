@@ -146,4 +146,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 # Custom user model
+
+
+AUTH_USER_MODEL = "users.User"
+
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 AUTH_USER_MODEL = "users.User"
