@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install deps
 COPY package*.json ./
-RUN npm install
+RUN npm install --include=optional
 
 # Copy rest of the app
 COPY . .
@@ -13,4 +13,4 @@ COPY . .
 EXPOSE 5173
 
 # Run Vite dev server in Docker
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["npm", "run", "dev", "--", "--host" ,"0.0.0.0"]
