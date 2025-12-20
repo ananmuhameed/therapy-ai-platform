@@ -25,7 +25,7 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
 
-    is_therapist = models.BooleanField(default=False)
+    is_therapist = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
