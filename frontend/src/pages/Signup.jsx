@@ -4,6 +4,11 @@ import { FaCloud } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axiosInstance";
 
+const isStrongPassword = (password) => {
+  const regex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+  return regex.test(password);
+};
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -41,10 +46,13 @@ const Signup = () => {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
+   if (!isStrongPassword(formData.password)) {
+    setError(
+    "Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
+    return;
+  }
+
+
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match!");
@@ -71,7 +79,7 @@ const Signup = () => {
   });
 
   setMessage("Registration done. You can now log in.");
-  navigate("/login", { replace: true });
+  navigate("/dashboard", { replace: true });
 } catch (err) {
   console.error(err);
 
