@@ -2,17 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { getUser, getAccessToken, clearAuth } from "../auth/storage";
-import { FiUsers, FiMic, FiFileText, FiPlus, FiX } from "react-icons/fi";
-import AddPatientForm from "../components/AddPatientForm/AddPatientForm";
+import { FiUsers, FiMic, FiFileText, FiPlus } from "react-icons/fi";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-
-  const [showAddPatient, setShowAddPatient] = useState(false);
-
-  // Close modal
-  const closeAddPatient = () => setShowAddPatient(false);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -40,23 +34,6 @@ export default function Dashboard() {
     loadMe();
   }, [navigate]);
 
-  // ESC to close + lock scroll when modal open
-  useEffect(() => {
-    if (!showAddPatient) return;
-
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") closeAddPatient();
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [showAddPatient]);
-
   if (!user) {
     return (
       <div className="p-8">
@@ -82,8 +59,8 @@ export default function Dashboard() {
       {/* Actions */}
       <div className="flex gap-4 items-center">
         <GradientButton
-          ariaLabel="Open add patient form"
-          onClick={() => setShowAddPatient(true)}
+          ariaLabel="Add patient"
+          onClick={() => navigate("/patients?add=1")}
         >
           <FiPlus size={18} />
           Add Patient
@@ -95,6 +72,7 @@ export default function Dashboard() {
             New Session
           </GradientButton>
         </Link>
+
       </div>
 
       {/* Recent Sessions */}
@@ -123,13 +101,6 @@ export default function Dashboard() {
         <pre className="text-xs bg-gray-100 p-4 rounded">
           {JSON.stringify(user, null, 2)}
         </pre>
-      )}
-
-      {showAddPatient && (
-        <Modal onClose={closeAddPatient} title="New Patient">
-          {/* Your form component */}
-          <AddPatientForm onClose={closeAddPatient} />
-        </Modal>
       )}
     </div>
   );
@@ -177,44 +148,3 @@ function GradientButton({ children, ariaLabel, onClick }) {
     </button>
   );
 }
-function Modal({ children, onClose }) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={onClose}   // 👈 click outside closes
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" />
-
-      {/* Modal panel */}
-      <div
-        className="
-          relative
-          w-full max-w-[520px]
-          rounded-2xl
-          bg-white
-          shadow-2xl
-          p-6
-        "
-        onClick={(e) => e.stopPropagation()} // 👈 prevent closing when clicking inside
-      >
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="
-            absolute top-4 right-4
-            p-2 rounded-full
-            hover:bg-gray-100
-          "
-          aria-label="Close"
-        >
-          ✕
-        </button>
-
-        {children}
-      </div>
-    </div>
-  );
-}
-
