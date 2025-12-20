@@ -5,9 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import PatientsListPage from "./pages/PatientsListPage";
-
-
-
+import Session from "./pages/Session";
 function App() {
   return (
     <HashRouter>
@@ -18,6 +16,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/sessions/new" element={<Session />} />
           <Route path="/patients" element={<PatientsListPage />} />
         </Route>
       </Routes>
