@@ -2,8 +2,8 @@
 import React, { useMemo, useState } from "react";
 import { FiMic, FiUploadCloud, FiChevronDown } from "react-icons/fi";
 import { BsStopFill, BsPauseFill, BsPlayFill } from "react-icons/bs";
-import Waveform from "./Waveform";
-const CreateSession = ({ patients = [], onStartRecording, onUploadAudio }) => {
+import Waveform from "../components/Waveform";
+const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     const [selectedPatientId, setSelectedPatientId] = useState("");
 
     // recording UI state
@@ -17,8 +17,9 @@ const CreateSession = ({ patients = [], onStartRecording, onUploadAudio }) => {
             label: p.name || p.full_name || p.fullName || `Patient #${p.id}`,
         }));
     }, [patients]);
-
-    //const canProceed = Boolean(selectedPatientId);
+    
+    // to disable and enable buttons for testing
+    // const canProceed = Boolean(selectedPatientId);
     const canProceed = true;
 
     const startRecording = () => {
@@ -272,4 +273,4 @@ const styles = {
     },
 };
 
-export default CreateSession;
+export default Session;
