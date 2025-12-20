@@ -6,29 +6,52 @@ on:
       - main
 
 jobs:
-
   backend:
-    name: Backend Dependency Check
+    name: Backend Tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: therapy_db
+          POSTGRES_USER: therapy_user
+          POSTGRES_PASSWORD: therapy_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U therapy_user -d therapy_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DJANGO_SETTINGS_MODULE: core.settings
+      DB_NAME: therapy_db
+      DB_USER: therapy_user
+      DB_PASSWORD: therapy_pass
+      DB_HOST: 127.0.0.1
+      DB_PORT: "5432"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install backend dependencies
-        run: |
-          if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-          else
-            echo "No requirements.txt found."
-          fi
+        run: pip install -r requirements.txt
+
+      - name: Run migrations
+        run: python manage.py migrate --noinput
+
+      - name: Run backend tests
+        run: pytest -q
 
   frontend:
     name: Frontend Dependency Check

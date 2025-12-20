@@ -99,13 +99,14 @@ WSGI_APPLICATION = "core.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "therapy_db"),
-        "USER": os.environ.get("POSTGRES_USER", "therapy_user"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "therapy_pass"),
-        "HOST": os.environ.get("POSTGRES_HOST", "db"),  # service name in docker-compose
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "NAME": os.environ.get("DB_NAME") or os.environ.get("POSTGRES_DB", "therapy_db"),
+        "USER": os.environ.get("DB_USER") or os.environ.get("POSTGRES_USER", "therapy_user"),
+        "PASSWORD": os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD", "therapy_pass"),
+        "HOST": os.environ.get("DB_HOST") or os.environ.get("POSTGRES_HOST", "db"),
+        "PORT": os.environ.get("DB_PORT") or os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
+
 
 
 # Password validation
