@@ -1,8 +1,6 @@
-# backend/users/tests.py
-
 import pytest
 from django.contrib.auth import authenticate, get_user_model
-
+from users.models import TherapistProfile
 from users.serializers import RegisterSerializer
 
 User = get_user_model()
@@ -159,3 +157,59 @@ class TestAuthentication:
     def test_login_fails_unknown_user(self):
         user = authenticate(username="nope@test.com", password=STRONG_PASSWORD)
         assert user is None
+
+@pytest.mark.django_db
+class TestTherapistProfile:
+    """
+    Tests related to TherapistProfile behavior.
+    These tests ensure that:
+    - A therapist profile is created automatically on user registration
+    - Duplicate therapist profiles are NOT created for the same user
+    """
+
+    def test_created_on_register(self):
+        """
+        When a user registers successfully,
+        a TherapistProfile should be created automatically.
+        """
+
+        data = {
+            "email": "therapist@test.com",
+            "first_name": "Therapist",
+            "last_name": "User",
+            "password": STRONG_PASSWORD,
+            "password_confirm": STRONG_PASSWORD,
+        }
+
+        serializer = RegisterSerializer(data=data)
+        assert serializer.is_valid(), serializer.errors
+
+        user = serializer.save()
+
+        # Assert therapist profile was created
+        assert TherapistProfile.objects.filter(user=user).exists()
+
+    def test_no_duplicates(self):
+        """
+        Ensure that only ONE TherapistProfile exists per user
+        even if profile creation logic is triggered more than once.
+        """
+
+        data = {
+            "email": "nodup@test.com",
+            "first_name": "No",
+            "last_name": "Duplicate",
+            "password": STRONG_PASSWORD,
+            "password_confirm": STRONG_PASSWORD,
+        }
+
+        serializer = RegisterSerializer(data=data)
+        assert serializer.is_valid(), serializer.errors
+
+        user = serializer.save()
+
+        # Simulate profile creation being called again
+        TherapistProfile.objects.get_or_create(user=user)
+
+        # There must be only one profile
+        assert TherapistProfile.objects.filter(user=user).count() == 1
