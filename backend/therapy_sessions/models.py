@@ -46,3 +46,41 @@ class TherapySession(models.Model):
 
     def __str__(self):
         return f"Session #{self.id} | Patient {self.patient_id} | {self.session_date}"
+    
+class SessionTranscript(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+    ]
+
+    session = models.OneToOneField(
+        "TherapySession",
+        on_delete=models.CASCADE,
+        related_name="transcript",
+        db_index=True,
+    )
+
+    raw_transcript = models.TextField(blank=True)
+    cleaned_transcript = models.TextField(blank=True)
+
+    language_code = models.CharField(max_length=10, blank=True)
+    word_count = models.PositiveIntegerField(default=0)
+
+    model_name = models.CharField(max_length=100, blank=True)
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default="completed",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "session_transcript"
+
+    def __str__(self):
+        return f"Transcript | Session #{self.session_id} | {self.status}"
