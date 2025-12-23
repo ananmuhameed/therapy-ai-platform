@@ -55,7 +55,7 @@ class SessionAudio(models.Model):
 
     session = models.OneToOneField(
         TherapySession,
-        on_delete=models.CASCADE,
+        on_delete=models.CASCADE, # when session is deleted, delete audio too
         related_name="audio", # one-to-one relationship when c
     )
     audio_file = models.FileField(upload_to="recordings/") # path to the file
