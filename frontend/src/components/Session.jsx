@@ -2,10 +2,8 @@
 import React, { useMemo, useState, useRef } from "react";
 import { FiMic, FiUploadCloud, FiChevronDown } from "react-icons/fi";
 import { BsStopFill, BsPauseFill, BsPlayFill } from "react-icons/bs";
-import Waveform from "../components/Waveform";
-import { uploadSessionAudio, replaceSessionAudio } from "../api/SessionAudio";
-import api from "../api/axiosInstance"
-import { useNavigate } from "react-router-dom";
+import Waveform from "./Waveform";
+
 
 const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -17,10 +15,7 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
 
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState("");
-    const [lastCreatedSessionId, setLastCreatedSessionId] = useState(null);
     const fileInputRef = React.useRef(null);
-
-    const navigate = useNavigate();
 
     const patientOptions = useMemo(() => {
         return (patients || []).map((p) => ({
@@ -28,20 +23,6 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
             label: p.name || p.full_name || p.fullName || `Patient #${p.id}`,
         }));
     }, [patients]);
-
-    const createSessionForPatient = async (patientId) => {
-        const payload = {
-            patient: Number(patientId),
-            session_date: new Date().toISOString(),
-            duration_minutes: 0,
-            notes_before: "",
-            notes_after: "",
-            status: "uploaded", // if backend allows it; otherwise remove this line
-        };
-
-        const res = await api.post("/sessions/", payload);
-        return res.data; // expects { id: ... }
-    };
 
     // to disable and enable buttons for testing
     const canProceed = Boolean(selectedPatientId);
@@ -85,25 +66,18 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
             setIsUploading(true);
             setUploadError("");
 
-            // 1) Create a session row first
-            const session = await createSessionForPatient(selectedPatientId);
-            setLastCreatedSessionId(session.id);
-
-            // 2) Upload audio to that session
-            await uploadSessionAudio(session.id, file, "");
-
-            // Optional: show success toast / navigate
-            // navigate(`/sessions/${session.id}`);
-
+            // delegate to the page
+            await onUploadAudio?.(selectedPatientId, file);
         } catch (err) {
-            const status = err?.response?.status;
-            const data = err?.response?.data;
-
-            if (status === 400) setUploadError(JSON.stringify(data));
-            else setUploadError(data?.detail || "Upload failed.");
+            // page should throw a friendly error message string or object
+            const msg =
+                err?.message ||
+                err?.response?.data?.detail ||
+                "Upload failed.";
+            setUploadError(msg);
         } finally {
             setIsUploading(false);
-            e.target.value = ""; // allow reselect same file
+            e.target.value = "";
         }
     };
 
@@ -170,9 +144,6 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
                         </button>
                     </div>
                     {uploadError && <p style={{ color: "crimson", marginTop: 10 }}>{uploadError}</p>}
-                    {lastCreatedSessionId && (
-                        <p style={{ marginTop: 6, opacity: 0.7 }}>Session ID: {lastCreatedSessionId}</p>
-                    )}
 
                     {/* Recorder / Playback bar */}
                     {isRecorderVisible && (
