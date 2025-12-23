@@ -63,3 +63,9 @@ class TherapistProfileSerializer(serializers.ModelSerializer):
         model = TherapistProfile
         fields = "__all__"
         read_only_fields = ["id", "user", "created_at", "updated_at"]
+
+class TherapistProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TherapistProfile
+        exclude = ("user", "created_at", "updated_at")
+        read_only_fields = ("is_completed",)
