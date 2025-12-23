@@ -2,9 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from .models import TherapistProfile
 
-from .serializers import RegisterSerializer, UserPublicSerializer
-
+from .serializers import RegisterSerializer, UserPublicSerializer,TherapistProfileSerializer
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -32,3 +32,15 @@ class MeView(APIView):
 
     def get(self, request):
         return Response(UserPublicSerializer(request.user).data)
+    
+class TherapistProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # get or create profile for logged-in user
+        profile, created = TherapistProfile.objects.get_or_create(
+            user=request.user
+        )
+
+        serializer = TherapistProfileSerializer(profile)
+        return Response(serializer.data)

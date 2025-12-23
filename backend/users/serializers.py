@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-
+from .models import TherapistProfile
 User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -57,3 +57,9 @@ class UserPublicSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         return obj.get_full_name()
+    
+class TherapistProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TherapistProfile
+        fields = "__all__"
+        read_only_fields = ["id", "user", "created_at", "updated_at"]
