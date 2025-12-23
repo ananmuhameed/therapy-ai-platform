@@ -1,8 +1,12 @@
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { FiMic, FiUploadCloud, FiChevronDown } from "react-icons/fi";
 import { BsStopFill, BsPauseFill, BsPlayFill } from "react-icons/bs";
 import Waveform from "../components/Waveform";
+import { uploadSessionAudio, replaceSessionAudio } from "../api/SessionAudio";
+import api from "../api/axiosInstance"
+import { useNavigate } from "react-router-dom";
+
 const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     const [selectedPatientId, setSelectedPatientId] = useState("");
 
@@ -11,16 +15,37 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
 
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState("");
+    const [lastCreatedSessionId, setLastCreatedSessionId] = useState(null);
+    const fileInputRef = React.useRef(null);
+
+    const navigate = useNavigate();
+
     const patientOptions = useMemo(() => {
         return (patients || []).map((p) => ({
             id: String(p.id),
             label: p.name || p.full_name || p.fullName || `Patient #${p.id}`,
         }));
     }, [patients]);
-    
+
+    const createSessionForPatient = async (patientId) => {
+        const payload = {
+            patient: Number(patientId),
+            session_date: new Date().toISOString(),
+            duration_minutes: 0,
+            notes_before: "",
+            notes_after: "",
+            status: "uploaded", // if backend allows it; otherwise remove this line
+        };
+
+        const res = await api.post("/sessions/", payload);
+        return res.data; // expects { id: ... }
+    };
+
     // to disable and enable buttons for testing
-    // const canProceed = Boolean(selectedPatientId);
-    const canProceed = true;
+    const canProceed = Boolean(selectedPatientId);
+    // const canProceed = true;
 
     const startRecording = () => {
         if (!canProceed) return;
@@ -47,14 +72,45 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     };
 
     const uploadAudio = () => {
-        if (!canProceed) return;
-        onUploadAudio?.(selectedPatientId);
+        if (!canProceed || isUploading) return;
+        setUploadError("");
+        fileInputRef.current?.click();
+    };
+
+    const onAudioSelected = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploading(true);
+            setUploadError("");
+
+            // 1) Create a session row first
+            const session = await createSessionForPatient(selectedPatientId);
+            setLastCreatedSessionId(session.id);
+
+            // 2) Upload audio to that session
+            await uploadSessionAudio(session.id, file, "");
+
+            // Optional: show success toast / navigate
+            // navigate(`/sessions/${session.id}`);
+
+        } catch (err) {
+            const status = err?.response?.status;
+            const data = err?.response?.data;
+
+            if (status === 400) setUploadError(JSON.stringify(data));
+            else setUploadError(data?.detail || "Upload failed.");
+        } finally {
+            setIsUploading(false);
+            e.target.value = ""; // allow reselect same file
+        }
     };
 
     return (
         <div style={styles.page}>
             {/* Spacer where navbar will be mounted later */}
-            <div style={{ height: 56 }} />
+            {/* <div style={{ height: 56 }} /> */}
 
             <main style={styles.main}>
                 <h1 style={styles.title}>
@@ -86,6 +142,7 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
 
                     {/* Actions */}
                     <div style={styles.actionsRow}>
+
                         <button
                             type="button"
                             onClick={startRecording}
@@ -102,16 +159,20 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
                         <button
                             type="button"
                             onClick={uploadAudio}
-                            disabled={!canProceed}
+                            disabled={!canProceed || isUploading}
                             style={{
                                 ...styles.actionBtn,
-                                ...(canProceed ? {} : styles.disabledBtn),
+                                ...(canProceed && !isUploading ? {} : styles.disabledBtn),
                             }}
                         >
                             <FiUploadCloud size={22} style={styles.actionIcon} />
-                            <span style={styles.actionText}>Upload Audio</span>
+                            <span style={styles.actionText}>{isUploading ? "Uploading..." : "Upload Audio"}</span>
                         </button>
                     </div>
+                    {uploadError && <p style={{ color: "crimson", marginTop: 10 }}>{uploadError}</p>}
+                    {lastCreatedSessionId && (
+                        <p style={{ marginTop: 6, opacity: 0.7 }}>Session ID: {lastCreatedSessionId}</p>
+                    )}
 
                     {/* Recorder / Playback bar */}
                     {isRecorderVisible && (
@@ -136,6 +197,13 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
                         </div>
                     )}
                 </div>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="audio/*"
+                    style={{ display: "none" }}
+                    onChange={onAudioSelected}
+                />
             </main>
 
             {/* Spacer where footer will be mounted later */}
