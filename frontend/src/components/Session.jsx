@@ -5,7 +5,7 @@ import { BsStopFill, BsPauseFill, BsPlayFill } from "react-icons/bs";
 import Waveform from "./Waveform";
 
 
-const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
+const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFinished }) => {
     const [selectedPatientId, setSelectedPatientId] = useState("");
 
     // recording UI state
@@ -16,6 +16,9 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState("");
     const fileInputRef = React.useRef(null);
+
+    const mediaRecorderRef = useRef(null);
+    const chunksRef = useRef([]);
 
     const patientOptions = useMemo(() => {
         return (patients || []).map((p) => ({
@@ -28,27 +31,74 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio }) => {
     const canProceed = Boolean(selectedPatientId);
     // const canProceed = true;
 
-    const startRecording = () => {
+    const startRecording = async () => {
         if (!canProceed) return;
-        setIsRecorderVisible(true);
-        setIsRecording(true);
-        setIsPaused(false);
-        onStartRecording?.(selectedPatientId);
+
+        setUploadError("");
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+            mediaRecorderRef.current = recorder;
+            chunksRef.current = [];
+
+            recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+            };
+
+            recorder.onstop = async () => {
+                // stop mic
+                stream.getTracks().forEach((t) => t.stop());
+
+                // build blob -> file
+                const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+                const filename = `recording_${Date.now()}.webm`;
+                const file = new File([blob], filename, { type: "audio/webm" });
+
+                // UI reset
+                setIsRecording(false);
+                setIsPaused(false);
+                setIsRecorderVisible(false);
+
+                // delegate to page: create session + upload
+                try {
+                    await onRecordingFinished?.(selectedPatientId, file);
+                } catch (err) {
+                    setUploadError(err?.message || err?.response?.data?.detail || "Failed to upload recording.");
+                }
+            };
+
+            // UI state
+            setIsRecorderVisible(true);
+            setIsRecording(true);
+            setIsPaused(false);
+
+            recorder.start();
+            onStartRecording?.(selectedPatientId); // optional hook
+        } catch (err) {
+            setUploadError("Microphone permission denied or not available.");
+        }
     };
 
     const stopRecording = () => {
-        setIsRecording(false);
-        setIsPaused(false);
-        setIsRecorderVisible(false);
+        const recorder = mediaRecorderRef.current;
+        if (!recorder) return;
+
+        if (recorder.state !== "inactive") recorder.stop();
     };
 
     const pauseRecording = () => {
-        if (!isRecording) return;
+        const r = mediaRecorderRef.current;
+        if (!r || r.state !== "recording") return;
+        r.pause();
         setIsPaused(true);
     };
 
     const resumeRecording = () => {
-        if (!isRecording) return;
+        const r = mediaRecorderRef.current;
+        if (!r || r.state !== "paused") return;
+        r.resume();
         setIsPaused(false);
     };
 

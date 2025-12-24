@@ -35,36 +35,41 @@ export default function SessionPage() {
         return () => { alive = false; };
     }, []);
 
-    const createSessionForPatient = async (patientId) => {
+    const createSessionForPatient = async (patientId, initialStatus) => {
         const payload = {
             patient: Number(patientId),
             session_date: new Date().toISOString(),
             duration_minutes: 0,
             notes_before: "",
             notes_after: "",
-            status: "uploaded", // if backend allows it; otherwise remove this line
+            status: initialStatus, // "uploaded" or "recorded"
         };
 
         const res = await api.post("/sessions/", payload);
-        return res.data; // expects { id: ... }
+        return res.data; // { id: ... }
     };
 
-    const handleUploadAudio = async (patientId, file) => {
-        if (!patientId) throw new Error("Please select a patient first.");
+    const handleAudioForNewSession = async (patientId, file, source) => {
+        // 1) create session
+        const initialStatus = source === "recorded" ? "recorded" : "uploaded";
+        const session = await createSessionForPatient(patientId, initialStatus);
 
-        // 1) create new session
-        const session = await createSessionForPatient(patientId);
-
-        // 2) upload audio
+        // 2) upload audio -> backend saves to MEDIA_ROOT and flips session.status = transcribing
         await uploadSessionAudio(session.id, file, "");
 
-        // 3) navigate either to session details or patient's session list
+        // 3) navigate away
+        // navigate(`/patients/${patientId}`);
         // navigate(`/sessions/${session.id}`);
     };
 
     if (loading) return <div style={{ padding: 24 }}>Loading patients...</div>;
     if (err) return <div style={{ padding: 24, color: "crimson" }}>{err}</div>;
 
-    return <Session patients={patients}
-        onUploadAudio={handleUploadAudio} />;
+    return (
+        <Session
+            patients={patients}
+            onUploadAudio={(patientId, file) => handleAudioForNewSession(patientId, file, "uploaded")}
+            onRecordingFinished={(patientId, file) => handleAudioForNewSession(patientId, file, "recorded")}
+        />
+    );
 }
