@@ -4,6 +4,18 @@ import { FaChevronDown } from "react-icons/fa6";
 import { FaSearch, FaArrowCircleRight } from "react-icons/fa";
 import { IoAddCircleOutline } from "react-icons/io5";
 
+const calcAge = (dob) => {
+  if (!dob) return "—";
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return "—";
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age < 0 ? "—" : age;
+};
+
 const PatientsList = ({ onAddPatient, onViewProfile }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -136,7 +148,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
               {filteredPatients.map((p) => {
                 const name = p.full_name || p.name || "—";
                 const gender = p.gender || "—";
-                const age = p.age ?? "—";
+                const age = p.age ?? calcAge(p.date_of_birth);
 
                 const lastSession =
                   p.last_session || p.last_session_date || p.lastSession || "—";
