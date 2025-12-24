@@ -23,3 +23,15 @@ api.interceptors.request.use(
 );
 
 export default api;
+
+export const uploadSessionAudio = async (sessionId, file) => {
+  const formData = new FormData();
+  formData.append("audio_file", file);
+
+  // We use 'api' here (the instance defined above)
+  return api.patch(`/therapy_sessions/${sessionId}/`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
