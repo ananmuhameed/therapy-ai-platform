@@ -5,6 +5,7 @@ from .models import TherapySession, SessionAudio
 from rest_framework.response import Response
 from .serializers import TherapySessionSerializer, SessionAudioUploadSerializer
 from rest_framework.decorators import action
+from .tasks import transcribe_session, analyze_session
 
 class TherapySessionViewSet(viewsets.ModelViewSet):
     serializer_class = TherapySessionSerializer
@@ -61,7 +62,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
 
         #TO-DO
         # enqueue transcription task here (after DB commit)
-        # transcribe_session.delay(session_id=locked.id)
+        transaction.on_commit(lambda: transcribe_session.delay(locked.id))
 
         return Response(
             {"detail": "Upload successful. Transcription started.", "audio_id": audio.id},
@@ -87,7 +88,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # delete old audio 
+            # delete old audio from db
             old_audio = locked.audio
             old_audio.delete() 
 
@@ -104,7 +105,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             locked.last_error_stage = ""
             locked.last_error_message = ""
 
-            # TODO: clear transcript/report fields if you have them
+            # TODO: clear transcript/report fields if created
             # locked.transcript_text = ""
             # locked.report_pdf = None
             # locked.report_json = {}
@@ -112,7 +113,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             locked.save(update_fields=["status", "last_error_stage", "last_error_message", "updated_at"])
 
         # enqueue transcription
-        # transcribe_session.delay(session_id=locked.id)
+        transaction.on_commit(lambda: transcribe_session.delay(locked.id))
 
         return Response(
             {"detail": "Audio replaced. Transcription restarted.", "audio_id": new_audio.id},
