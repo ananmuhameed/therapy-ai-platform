@@ -48,7 +48,8 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
       const gender = (p.gender || "").toLowerCase();
 
       const matchSearch = !q || name.includes(q);
-      const matchGender = filterGender === "all" || gender === filterGender.toLowerCase();
+      const matchGender =
+        filterGender === "all" || gender === filterGender.toLowerCase();
 
       return matchSearch && matchGender;
     });
@@ -68,7 +69,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
               <select
                 value={filterGender}
                 onChange={(e) => setFilterGender(e.target.value)}
-                className="appearance-none px-6 py-3 rounded-full bg-[#f5f5f5] text-[#727473] w-44 outline-none"
+                className="appearance-none px-6 py-3 rounded-full bg-[#f5f5f5] text-[#444] font-medium w-44 outline-none capitalize"
               >
                 <option value="all">Filter by</option>
                 <option value="female">Female</option>
@@ -153,9 +154,9 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
                     <div className="col-span-1 flex justify-end">
                       <button
                         onClick={() => onViewProfile?.(p)}
-                        className="text-[#222] font-semibold flex items-center gap-2"
+                        className="text-[#222] font-semibold flex items-center gap-2 whitespace-nowrap"
                       >
-                        view profile
+                        View profile
                         <FaArrowCircleRight />
                       </button>
                     </div>
