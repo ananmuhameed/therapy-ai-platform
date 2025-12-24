@@ -129,12 +129,13 @@ const Signup = () => {
           <div className="space-y-5">
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+              <label htmlFor="fullName" className="block text-sm font-medium mb-2 text-[#dae2de]">
                 Full Name
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
                 <input
+                  id="fullName" 
                   type="text"
                   name="fullName"
                   value={formData.fullName}
@@ -148,12 +149,13 @@ const Signup = () => {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+              <label htmlFor="email" className="block text-sm font-medium mb-2 text-[#dae2de]">
                 Email Address
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
                 <input
+                  id="email"
                   type="email"
                   name="email"
                   value={formData.email}
@@ -167,12 +169,13 @@ const Signup = () => {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+              <label htmlFor="password" className="block text-sm font-medium mb-2 text-[#dae2de]">
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
@@ -194,12 +197,13 @@ const Signup = () => {
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-[#dae2de]">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2 text-[#dae2de]">
                 Confirm Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8D8F8E]" />
                 <input
+                  id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
@@ -208,12 +212,13 @@ const Signup = () => {
                   className="w-full pl-12 pr-12 py-3.5 rounded-xl border-2 bg-[#5B687C] border-[#5B687C] text-[#D4CDCB] focus:outline-none focus:border-[#5B687C]"
                   placeholder="••••••••"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((s) => !s)}
-                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                  className="absolute right-4 top-1/2 -translate-y-1/2"
-                >
+               <button
+  type="button"
+  onClick={() => setShowConfirmPassword((s) => !s)}
+  aria-label={showConfirmPassword ? "Hide password visibility" : "Show password visibility"}
+  className="absolute right-4 top-1/2 -translate-y-1/2"
+>
+
                   {showConfirmPassword ? <EyeOff /> : <Eye />}
                 </button>
               </div>
