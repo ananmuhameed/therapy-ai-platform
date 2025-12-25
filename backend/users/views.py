@@ -1,3 +1,4 @@
+from urllib import request
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -33,7 +34,7 @@ class MeView(APIView):
     def get(self, request):
         return Response(UserPublicSerializer(request.user).data)
     
-class TherapistProfileView(APIView):
+class TherapistProfileAPIView(APIView):
     """
     API endpoint for managing the authenticated therapist profile.
 
@@ -41,70 +42,82 @@ class TherapistProfileView(APIView):
     - GET: Retrieve the logged-in therapist profile.
     - PATCH: Partially update the therapist profile.
     - Automatically create a profile if it does not exist.
-    - Automatically mark profile as completed once required fields are filled.
+    - Prevent invalid completion attempts.
+    - Mark profile as completed only when required fields are present.
     """
     permission_classes = [IsAuthenticated]
 
     def get_object(self, user):
         """
-        Retrieve the TherapistProfile for the given user.
-
-        If the profile does not exist, it will be created automatically.
-        This ensures the frontend can always rely on having a profile object.
-
-        Args:
-            user (User): The authenticated user.
-
-        Returns:
-            TherapistProfile: The user's therapist profile.
+        Always return the therapist profile for the authenticated user.
+        Auto-create if missing.
         """
         profile, _ = TherapistProfile.objects.get_or_create(user=user)
         return profile
 
     def get(self, request):
         """
-        Returns the therapist profile of the currently authenticated user.
+        Return the therapist profile for the authenticated user.
         """
         profile = self.get_object(request.user)
         serializer = TherapistProfileSerializer(profile)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request):
         """
         Partially update the therapist profile.
-        Only provided fields will be updated (partial update).
 
-        After updating:
-        - Checks whether the required fields are filled.
-        - If all required fields are present, marks the profile as completed.
+        Rules:
+        - If profile is NOT completed yet:
+            → This PATCH is considered a completion attempt
+            → All required fields must be present
+        - If profile IS already completed:
+            → Allow partial updates freely
         """
         profile = self.get_object(request.user)
 
-        # Use a restricted serializer for updates
+        # Fields required for first-time completion
+        REQUIRED_FIELDS = [
+            "specialization",
+            "license_number",
+            "years_experience",
+            "clinic_name",
+        ]
+
+        # FIRST-TIME COMPLETION VALIDATION
+        if not profile.is_completed:
+            missing_fields = []
+
+            for field in REQUIRED_FIELDS:
+                # value can come from request OR existing profile
+                value = request.data.get(field) or getattr(profile, field)
+
+                if not value:
+                    missing_fields.append(field)
+
+            if missing_fields:
+                return Response(
+                    {
+                        "detail": "Profile completion requires all mandatory fields.",
+                        "missing_fields": missing_fields,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Apply PATCH (partial update allowed)
         serializer = TherapistProfileUpdateSerializer(
             profile,
             data=request.data,
-            partial=True,  # Allows updating only sent fields
+            partial=True,
         )
         serializer.is_valid(raise_exception=True)
         profile = serializer.save()
 
-        # fields required to consider the profile "completed"
-        REQUIRED_FIELDS = [
-            "specialization",
-            "license_number",
-            "clinic_name",
-            "country",
-            "city",
-        ]
+        # Mark profile as completed AFTER first successful completion
+        if not profile.is_completed:
+            profile.is_completed = True
+            profile.save(update_fields=["is_completed"])
 
-        # mark profile as completed once all required fields are filled
-        if all(getattr(profile, field) for field in REQUIRED_FIELDS):
-            if not profile.is_completed:
-                profile.is_completed = True
-                profile.save(update_fields=["is_completed"])
-
-        # return the full profile using the read serializer
         return Response(
             TherapistProfileSerializer(profile).data,
             status=status.HTTP_200_OK,
