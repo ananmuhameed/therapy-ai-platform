@@ -1,7 +1,9 @@
 from celery import shared_task
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 
+<<<<<<< Updated upstream
 from .models import SessionTranscript, TherapySession
 
 # TODO: replace these with your real implementations
@@ -21,10 +23,19 @@ def run_analysis(transcript_text: str) -> dict:
     retry_jitter=True,
     retry_kwargs={"max_retries": 5},
 )
+=======
+from therapy_sessions.models import TherapySession, SessionTranscript, SessionReport
+from therapy_sessions.services.transcription import get_transcription_service
+from therapy_sessions.services.reporting.service import ReportService, ReportGenerationError
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+>>>>>>> Stashed changes
 def transcribe_session(self, session_id: int):
     try:
         session = TherapySession.objects.select_related("audio").get(id=session_id)
 
+<<<<<<< Updated upstream
         if not hasattr(session, "audio"):
             # This should not happen if you enqueue after commit
             raise RuntimeError("No audio attached to session.")
@@ -41,48 +52,110 @@ def transcribe_session(self, session_id: int):
 
         # TODO: save transcript_text in your SessionTranscript model/table
         # SessionTranscript.objects.update_or_create(session=session, defaults={...})
+=======
+    try:
+        audio = session.audio
+    except ObjectDoesNotExist:
+        return {"ok": False, "error": "no_audio", "session_id": session_id}
+
+    transcript, _ = SessionTranscript.objects.get_or_create(
+        session=session,
+        defaults={
+            "status": "transcribing",
+            "language_code": (getattr(audio, "language_code", None) or "en"),
+        },
+    )
+
+    if transcript.status == "completed":
+        return {
+            "ok": True,
+            "skipped": True,
+            "reason": "already_completed",
+            "session_id": session_id,
+            "transcript_id": transcript.id,
+        }
+
+    if transcript.status != "transcribing":
+        transcript.status = "transcribing"
+        transcript.updated_at = timezone.now()
+        transcript.save(update_fields=["status", "updated_at"])
+
+    audio_path = (
+        getattr(getattr(audio, "audio_file", None), "path", None)
+        or getattr(audio, "storage_path", None)
+    )
+    if not audio_path:
+        raise RuntimeError("Audio path missing/unsupported for current storage backend.")
+>>>>>>> Stashed changes
 
         session.status = "analyzing"
         session.save(update_fields=["status", "updated_at"])
 
+<<<<<<< Updated upstream
         # enqueue next step
         analyze_session.delay(session_id)
 
     except Exception as exc:
         # if this was the last retry, mark failed
+=======
+    try:
+        service = get_transcription_service()
+        result = service.transcribe(audio_path=audio_path, language=language)
+
+        with transaction.atomic():
+            transcript.raw_transcript = result["raw_text"]
+            transcript.cleaned_transcript = result["cleaned_text"]
+            transcript.language_code = result["language"]
+            transcript.word_count = result["word_count"]
+            transcript.model_name = result["model_name"]
+            transcript.status = "completed"
+            transcript.updated_at = timezone.now()
+            transcript.save()
+
+            transaction.on_commit(lambda: generate_session_report.delay(session_id))
+
+        return {"ok": True, "session_id": session_id, "transcript_id": transcript.id}
+
+    except Exception as e:
+>>>>>>> Stashed changes
         if self.request.retries >= self.max_retries:
             session = TherapySession.objects.get(id=session_id)
             session.status = "failed"
             session.save(update_fields=["status", "updated_at"])
         raise
 
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_jitter=True,
-    retry_kwargs={"max_retries": 5},
-)
-def analyze_session(self, session_id: int):
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def generate_session_report(self, session_id: int):
+    """
+    - Business errors (ReportGenerationError) => mark failed and STOP (no retry)
+    - Unexpected errors => mark failed and retry
+    """
     try:
-        session = TherapySession.objects.get(id=session_id)
+        report = ReportService.generate_for_session(session_id)
 
-        # TODO: fetch transcript text from DB
-        transcript_text = "transcript text (mock)"
+        if report.status != "completed":
+            report.status = "completed"
+            report.save(update_fields=["status"])
 
-        report = run_analysis(transcript_text)
+        return {"ok": True, "session_id": session_id, "report_id": report.id}
 
-        # TODO: save report JSON/PDF path in DB
-        # SessionReport.objects.update_or_create(session=session, defaults={...})
+    except ReportGenerationError as e:
+        # Ensure a report exists, then mark failed (no retries)
+        SessionReport.objects.get_or_create(
+            session_id=session_id,
+            defaults={"status": "failed", "model_name": "mock-v1"},
+        )
+        SessionReport.objects.filter(session_id=session_id).update(status="failed")
+        return {"ok": False, "error": "report_generation_error", "detail": str(e), "session_id": session_id}
 
-        session.status = "completed"
-        session.save(update_fields=["status", "updated_at"])
-        
-    except Exception as exc:
-        max_retries = getattr(self, "max_retries", 0) or 0
-        if self.request.retries >= max_retries:
-            TherapySession.objects.filter(id=session_id).update(
-                status="failed",
-                updated_at=timezone.now(),
-            )
-        raise
+    except Exception as e:
+        # Ensure a report exists, then mark failed and retry
+        SessionReport.objects.get_or_create(
+            session_id=session_id,
+            defaults={"status": "failed", "model_name": "unknown"},
+        )
+        SessionReport.objects.filter(session_id=session_id).update(status="failed")
+
+        if self.request.retries >= self.max_retries:
+            raise
+        raise self.retry(exc=e)

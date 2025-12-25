@@ -1,11 +1,33 @@
+<<<<<<< Updated upstream
 from rest_framework import viewsets, permissions, status
+=======
+# backend/therapy_sessions/views.py
+
+from django.db import transaction
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+>>>>>>> Stashed changes
 from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
 from .models import TherapySession, SessionAudio
 from rest_framework.response import Response
+<<<<<<< Updated upstream
 from .serializers import TherapySessionSerializer, SessionAudioUploadSerializer
 from rest_framework.decorators import action
 from .tasks import transcribe_session, analyze_session
+=======
+
+from therapy_sessions.serializers import (
+    TherapySessionSerializer,
+    SessionAudioUploadSerializer,
+    SessionTranscriptSerializer,
+    SessionReportSerializer,
+    SessionReportNotesSerializer,
+)
+from therapy_sessions.tasks import transcribe_session
+from therapy_sessions.models import SessionTranscript, SessionAudio, TherapySession, SessionReport
+
+>>>>>>> Stashed changes
 
 class TherapySessionViewSet(viewsets.ModelViewSet):
     serializer_class = TherapySessionSerializer
@@ -60,9 +82,13 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             locked.last_error_message = ""
             locked.save(update_fields=["status", "last_error_stage", "last_error_message", "updated_at"])
 
+<<<<<<< Updated upstream
         #TO-DO
         # enqueue transcription task here (after DB commit)
         transaction.on_commit(lambda: transcribe_session.delay(locked.id))
+=======
+            transaction.on_commit(lambda: transcribe_session.delay(locked.id))
+>>>>>>> Stashed changes
 
         return Response(
             {"detail": "Upload successful. Transcription started.", "audio_id": audio.id},
@@ -112,10 +138,55 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
 
             locked.save(update_fields=["status", "last_error_stage", "last_error_message", "updated_at"])
 
+<<<<<<< Updated upstream
         # enqueue transcription
         transaction.on_commit(lambda: transcribe_session.delay(locked.id))
+=======
+            transaction.on_commit(lambda: transcribe_session.delay(locked.id))
+>>>>>>> Stashed changes
 
         return Response(
             {"detail": "Audio replaced. Transcription restarted.", "audio_id": new_audio.id},
             status=status.HTTP_200_OK,
+<<<<<<< Updated upstream
         )
+=======
+        )
+
+    @action(detail=True, methods=["get"], url_path="transcript")
+    def get_transcript(self, request, pk=None):
+        session = self.get_object()
+
+        transcript = SessionTranscript.objects.filter(session=session).first()
+        if not transcript:
+            return Response(
+                {"detail": "Transcript not available yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response(SessionTranscriptSerializer(transcript).data)
+
+    @action(detail=True, methods=["get", "patch"], url_path="report")
+    def report(self, request, pk=None):
+        """
+        GET  /sessions/{id}/report  -> returns report
+        PATCH /sessions/{id}/report -> updates therapist_notes only
+        """
+        session = self.get_object()
+
+        report = SessionReport.objects.filter(session=session).first()
+        if not report:
+            return Response(
+                {"detail": "Report not generated yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.method.lower() == "patch":
+            ser = SessionReportNotesSerializer(data=request.data)
+            ser.is_valid(raise_exception=True)
+
+            report.therapist_notes = ser.validated_data["therapist_notes"]
+            report.save(update_fields=["therapist_notes", "updated_at"])
+
+        return Response(SessionReportSerializer(report).data)
+>>>>>>> Stashed changes
