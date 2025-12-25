@@ -1,58 +1,28 @@
+# backend/therapy_sessions/tasks.py
+from __future__ import annotations
+
 from celery import shared_task
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 
-<<<<<<< Updated upstream
-from .models import SessionTranscript, TherapySession
-
-# TODO: replace these with your real implementations
-def run_transcription(audio_file: str, language_code: str | None) -> str:
-    # whisper / faster-whisper call here
-    return "transcript text (mock)"
-
-def run_analysis(transcript_text: str) -> dict:
-    # LLM call here
-    return {"summary": "analysis (mock)"}
-
-
-@shared_task(
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,        # exponential backoff
-    retry_jitter=True,
-    retry_kwargs={"max_retries": 5},
-)
-=======
 from therapy_sessions.models import TherapySession, SessionTranscript, SessionReport
 from therapy_sessions.services.transcription import get_transcription_service
 from therapy_sessions.services.reporting.service import ReportService, ReportGenerationError
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
->>>>>>> Stashed changes
 def transcribe_session(self, session_id: int):
+    """
+    Async: loads session + audio, calls transcription service, persists SessionTranscript.
+    Safe for retries + idempotent-ish.
+    On success, triggers report generation AFTER transcript commit.
+    """
     try:
         session = TherapySession.objects.select_related("audio").get(id=session_id)
+    except TherapySession.DoesNotExist:
+        return {"ok": False, "error": "session_not_found", "session_id": session_id}
 
-<<<<<<< Updated upstream
-        if not hasattr(session, "audio"):
-            # This should not happen if you enqueue after commit
-            raise RuntimeError("No audio attached to session.")
-
-        # status is already set to transcribing by API, but keep this safe
-        if session.status != "transcribing":
-            session.status = "transcribing"
-            session.save(update_fields=["status", "updated_at"])
-
-        audio_file = session.audio.audio_file.path  # local storage
-        language_code = session.audio.language_code
-
-        transcript_text = run_transcription(audio_file, language_code)
-
-        # TODO: save transcript_text in your SessionTranscript model/table
-        # SessionTranscript.objects.update_or_create(session=session, defaults={...})
-=======
     try:
         audio = session.audio
     except ObjectDoesNotExist:
@@ -85,23 +55,16 @@ def transcribe_session(self, session_id: int):
         or getattr(audio, "storage_path", None)
     )
     if not audio_path:
-        raise RuntimeError("Audio path missing/unsupported for current storage backend.")
->>>>>>> Stashed changes
+        # will retry; on final retry we mark failed below
+        raise RuntimeError("Audio path is missing/unsupported by the current storage backend.")
 
-        session.status = "analyzing"
-        session.save(update_fields=["status", "updated_at"])
+    language = getattr(audio, "language_code", None) or "en"
 
-<<<<<<< Updated upstream
-        # enqueue next step
-        analyze_session.delay(session_id)
-
-    except Exception as exc:
-        # if this was the last retry, mark failed
-=======
     try:
         service = get_transcription_service()
         result = service.transcribe(audio_path=audio_path, language=language)
 
+        # Ensure commit happens before we enqueue the next task
         with transaction.atomic():
             transcript.raw_transcript = result["raw_text"]
             transcript.cleaned_transcript = result["cleaned_text"]
@@ -117,12 +80,14 @@ def transcribe_session(self, session_id: int):
         return {"ok": True, "session_id": session_id, "transcript_id": transcript.id}
 
     except Exception as e:
->>>>>>> Stashed changes
+        # mark failed only on FINAL attempt
         if self.request.retries >= self.max_retries:
-            session = TherapySession.objects.get(id=session_id)
-            session.status = "failed"
-            session.save(update_fields=["status", "updated_at"])
-        raise
+            transcript.status = "failed"
+            transcript.updated_at = timezone.now()
+            transcript.save(update_fields=["status", "updated_at"])
+            raise
+        raise self.retry(exc=e)
+
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def generate_session_report(self, session_id: int):
@@ -146,7 +111,12 @@ def generate_session_report(self, session_id: int):
             defaults={"status": "failed", "model_name": "mock-v1"},
         )
         SessionReport.objects.filter(session_id=session_id).update(status="failed")
-        return {"ok": False, "error": "report_generation_error", "detail": str(e), "session_id": session_id}
+        return {
+            "ok": False,
+            "error": "report_generation_error",
+            "detail": str(e),
+            "session_id": session_id,
+        }
 
     except Exception as e:
         # Ensure a report exists, then mark failed and retry
