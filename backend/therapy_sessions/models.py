@@ -84,3 +84,41 @@ class SessionTranscript(models.Model):
 
     def __str__(self):
         return f"Transcript | Session #{self.session_id} | {self.status}"
+    
+class SessionReport(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+    ]
+
+    session = models.OneToOneField(
+        "TherapySession",
+        on_delete=models.CASCADE,
+        related_name="report",
+        db_index=True,
+    )
+
+    generated_summary = models.TextField(blank=True)
+    key_points = models.TextField(blank=True)
+    risk_flags = models.TextField(blank=True)
+    treatment_plan = models.TextField(blank=True)
+    therapist_notes = models.TextField(blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="draft",
+    )
+
+    model_name = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "session_report"
+
+    def __str__(self):
+        return f"Report | Session #{self.session_id} | {self.status}"
+
