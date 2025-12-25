@@ -7,18 +7,28 @@ import { FiUsers, FiMic, FiFileText, FiPlus } from "react-icons/fi";
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
+  const [stats, setStats] = useState({
+  patients_count: 0,
+  sessions_this_week: 0,
+  reports_ready: 0,
+});
 
   useEffect(() => {
     const token = getAccessToken();
-
+    // If no token → redirect to login
     if (!token) {
       navigate("/login", { replace: true });
       return;
     }
-
+    // Load cached user (if exists) to avoid blank UI
     const cached = getUser();
     if (cached) setUser(cached);
-
+    /**
+     * Load authenticated user data
+     * Used to:
+     * - validate token
+     * - refresh user info
+     */
     const loadMe = async () => {
       try {
         const { data } = await api.get("/auth/me/");
@@ -26,12 +36,28 @@ export default function Dashboard() {
         localStorage.setItem("user", JSON.stringify(data));
       } catch (err) {
         console.error("Failed to load /auth/me:", err);
+        // Token invalid or expired        
         clearAuth();
         navigate("/login", { replace: true });
       }
     };
-
+    /**
+     * Load dashboard statistics:
+     * - patients_count
+     * - sessions_this_week
+     * - reports_ready
+     */    
+    const loadDashboardStats = async () => {
+    try {
+      const { data } = await api.get("/dashboard/");
+        setStats(data);
+      } catch (err) {
+        console.error("Dashboard stats error:", err);
+      }
+    };
+    
     loadMe();
+    loadDashboardStats();
   }, [navigate]);
 
   if (!user) {
@@ -51,9 +77,9 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatBox icon={<FiUsers size={22} />} label="Patients" value="20" />
-        <StatBox icon={<FiMic size={22} />} label="Sessions this week" value="5" />
-        <StatBox icon={<FiFileText size={22} />} label="Reports Ready" value="3" />
+        <StatBox icon={<FiUsers size={22} />} label="Patients" value={stats.patients_count} />
+        <StatBox icon={<FiMic size={22} />} label="Sessions this week" value={stats.sessions_this_week} />
+        <StatBox icon={<FiFileText size={22} />} label="Reports Ready" value="2" />
       </div>
 
       {/* Actions */}
@@ -96,7 +122,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* DEV */}
+      {/* Debug helper (development only) */}
       {import.meta.env.DEV && (
         <pre className="text-xs bg-gray-100 p-4 rounded">
           {JSON.stringify(user, null, 2)}
