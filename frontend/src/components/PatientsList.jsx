@@ -166,7 +166,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
                     <div className="col-span-1 flex justify-end">
                       <button
                         onClick={() => onViewProfile?.(p)}
-                        className="text-[#222] font-semibold flex items-center gap-2 whitespace-nowrap"
+                        className="text-[#222] font-semibold flex items-center gap-2 whitespace-nowrap cursor-pointer"
                       >
                         View profile
                         <FaArrowCircleRight />

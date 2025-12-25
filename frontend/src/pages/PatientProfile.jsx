@@ -150,14 +150,14 @@ export default function PatientProfile() {
             <>
               <button
                 onClick={() => setIsEditing(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-3xl bg-[#3078E2] text-white w-30 justify-center"
+                className="flex items-center gap-2 px-4 py-2 rounded-3xl bg-[#3078E2] text-white w-30 justify-center cursor-pointer"
               >
                 <FiEdit />
                 Edit
               </button>
               <button
                 onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2  bg-[#E23030] text-white rounded-3xl w-30 justify-center"
+                className="flex items-center gap-2 px-4 py-2  bg-[#E23030] text-white rounded-3xl w-30 justify-center cursor-pointer"
               >
                 <FiTrash2 />
                 Delete
