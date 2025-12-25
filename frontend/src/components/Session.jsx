@@ -1,9 +1,7 @@
-
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { FiMic, FiUploadCloud, FiChevronDown } from "react-icons/fi";
 import { BsStopFill, BsPauseFill, BsPlayFill } from "react-icons/bs";
 import Waveform from "./Waveform";
-
 
 const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFinished }) => {
     const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -12,6 +10,10 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
     const [isRecorderVisible, setIsRecorderVisible] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
+
+    // ✅ timer
+    const [elapsedSec, setElapsedSec] = useState(0);
+    const timerRef = useRef(null);
 
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState("");
@@ -27,9 +29,36 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
         }));
     }, [patients]);
 
-    // to disable and enable buttons for testing
     const canProceed = Boolean(selectedPatientId);
-    // const canProceed = true;
+
+    const formatTime = (sec) => {
+        const s = Math.max(0, Number(sec || 0));
+        const mm = String(Math.floor(s / 60)).padStart(2, "0");
+        const ss = String(s % 60).padStart(2, "0");
+        return `${mm}:${ss}`;
+    };
+
+    const startTimer = () => {
+        if (timerRef.current) return;
+        timerRef.current = setInterval(() => {
+            setElapsedSec((prev) => prev + 1);
+        }, 1000);
+    };
+
+    const stopTimer = () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const resetTimer = () => setElapsedSec(0);
+
+    // ✅ safety cleanup if user navigates away mid-recording
+    useEffect(() => {
+        return () => stopTimer();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const startRecording = async () => {
         if (!canProceed) return;
@@ -51,6 +80,10 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
                 // stop mic
                 stream.getTracks().forEach((t) => t.stop());
 
+                // ✅ timer reset
+                stopTimer();
+                resetTimer();
+
                 // build blob -> file
                 const blob = new Blob(chunksRef.current, { type: "audio/webm" });
                 const filename = `recording_${Date.now()}.webm`;
@@ -65,7 +98,11 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
                 try {
                     await onRecordingFinished?.(selectedPatientId, file);
                 } catch (err) {
-                    setUploadError(err?.message || err?.response?.data?.detail || "Failed to upload recording.");
+                    setUploadError(
+                        err?.message ||
+                        err?.response?.data?.detail ||
+                        "Failed to upload recording."
+                    );
                 }
             };
 
@@ -73,6 +110,10 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
             setIsRecorderVisible(true);
             setIsRecording(true);
             setIsPaused(false);
+
+            // ✅ timer start
+            resetTimer();
+            startTimer();
 
             recorder.start();
             onStartRecording?.(selectedPatientId); // optional hook
@@ -85,6 +126,9 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
         const recorder = mediaRecorderRef.current;
         if (!recorder) return;
 
+        // ✅ ensure timer stops immediately even before onstop fires
+        stopTimer();
+
         if (recorder.state !== "inactive") recorder.stop();
     };
 
@@ -93,6 +137,9 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
         if (!r || r.state !== "recording") return;
         r.pause();
         setIsPaused(true);
+
+        // ✅ pause timer
+        stopTimer();
     };
 
     const resumeRecording = () => {
@@ -100,6 +147,9 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
         if (!r || r.state !== "paused") return;
         r.resume();
         setIsPaused(false);
+
+        // ✅ resume timer
+        startTimer();
     };
 
     const uploadAudio = () => {
@@ -116,14 +166,9 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
             setIsUploading(true);
             setUploadError("");
 
-            // delegate to the page
             await onUploadAudio?.(selectedPatientId, file);
         } catch (err) {
-            // page should throw a friendly error message string or object
-            const msg =
-                err?.message ||
-                err?.response?.data?.detail ||
-                "Upload failed.";
+            const msg = err?.message || err?.response?.data?.detail || "Upload failed.";
             setUploadError(msg);
         } finally {
             setIsUploading(false);
@@ -133,9 +178,6 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
 
     return (
         <div style={styles.page}>
-            {/* Spacer where navbar will be mounted later */}
-            {/* <div style={{ height: 56 }} /> */}
-
             <main style={styles.main}>
                 <h1 style={styles.title}>
                     <span style={styles.titleGradient}>Start New Session</span>
@@ -166,7 +208,6 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
 
                     {/* Actions */}
                     <div style={styles.actionsRow}>
-
                         <button
                             type="button"
                             onClick={startRecording}
@@ -190,9 +231,12 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
                             }}
                         >
                             <FiUploadCloud size={22} style={styles.actionIcon} />
-                            <span style={styles.actionText}>{isUploading ? "Uploading..." : "Upload Audio"}</span>
+                            <span style={styles.actionText}>
+                                {isUploading ? "Uploading..." : "Upload Audio"}
+                            </span>
                         </button>
                     </div>
+
                     {uploadError && <p style={{ color: "crimson", marginTop: 10 }}>{uploadError}</p>}
 
                     {/* Recorder / Playback bar */}
@@ -215,9 +259,16 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
                             </div>
 
                             <Waveform active={isRecording} paused={isPaused} />
+
+                            {/* ✅ Counter (same bar, right side) */}
+                            <div style={styles.counterWrap} aria-label="Recording timer">
+                                <span style={styles.counterTime}>{formatTime(elapsedSec)}</span>
+                            </div>
+
                         </div>
                     )}
                 </div>
+
                 <input
                     ref={fileInputRef}
                     type="file"
@@ -227,7 +278,6 @@ const Session = ({ patients = [], onStartRecording, onUploadAudio, onRecordingFi
                 />
             </main>
 
-            {/* Spacer where footer will be mounted later */}
             <div style={{ height: 56 }} />
         </div>
     );
@@ -257,7 +307,8 @@ const styles = {
         textAlign: "center",
     },
     titleGradient: {
-        background: "linear-gradient(90deg, #3078E2 0%, #5D93E1 50%, #8AAEE0 100%)",
+        background:
+            "linear-gradient(90deg, #3078E2 0%, #5D93E1 50%, #8AAEE0 100%)",
         WebkitBackgroundClip: "text",
         backgroundClip: "text",
         color: "transparent",
@@ -360,6 +411,21 @@ const styles = {
     ctrlIconBlue: {
         color: "#3078E2",
     },
+
+    counterWrap: {
+        marginLeft: "auto",
+        minWidth: 88,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+    },
+    counterTime: {
+        fontSize: 18,
+        color: "#3078E2",
+        fontWeight: 800,
+        letterSpacing: 0.6,
+    },
+
 };
 
 export default Session;
