@@ -5,8 +5,8 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import PatientsListPage from "./pages/PatientsListPage";
-import Session from "./pages/Session";
-import PatientProfile from "./pages/PatientProfile";
+import Session from "./pages/SessionPage";
+import PatientProfile from "./pages/PatientProfile";  
 function App() {
   return (
     <HashRouter>
