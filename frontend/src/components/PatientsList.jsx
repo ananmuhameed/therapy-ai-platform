@@ -48,8 +48,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
       const gender = (p.gender || "").toLowerCase();
 
       const matchSearch = !q || name.includes(q);
-      const matchGender =
-        filterGender === "all" || gender === filterGender.toLowerCase();
+      const matchGender = filterGender === "all" || gender === filterGender.toLowerCase();
 
       return matchSearch && matchGender;
     });
@@ -57,7 +56,6 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
 
   return (
     <div className="w-full max-w-6xl">
-      {/* Title */}
       <h1 className="text-4xl font-semibold text-[#2f6fd6] mb-6 drop-shadow-sm">
         Patient List
       </h1>
@@ -102,7 +100,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
           </button>
         </div>
 
-        {/* patients table */}
+        {/* header */}
         <div className="grid grid-cols-12 px-10 py-4 text-[#9a9a9a] text-sm border-b border-[#e6e6e6]">
           <div className="col-span-4">Full Name</div>
           <div className="col-span-3">Gender</div>
@@ -140,10 +138,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
                 const age = p.age ?? "—";
 
                 const lastSession =
-                  p.last_session ||
-                  p.last_session_date ||
-                  p.lastSession ||
-                  "—";
+                  p.last_session || p.last_session_date || p.lastSession || "—";
 
                 return (
                   <div

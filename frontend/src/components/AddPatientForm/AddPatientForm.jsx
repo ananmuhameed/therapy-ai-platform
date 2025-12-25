@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { FaRegCalendarAlt } from "react-icons/fa";
 import "./AddPatientForm.css";
+import api from "../../api/axiosInstance";
 
-export default function AddPatientForm({onClose}) {
+
+export default function AddPatientForm({ onClose }) {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -18,16 +20,29 @@ export default function AddPatientForm({onClose}) {
     setForm({ ...form, [name]: value });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    console.log("Patient Data:", {
-      ...form,
-      phone: `${form.countryCode}${form.phone}`,
-    });
+    const payload = {
+      full_name: form.fullName,
+      contact_email: form.email,
+      contact_phone: `${form.countryCode}${form.phone}`,
+      gender: form.gender,
+      date_of_birth: form.dob,
+      notes: form.notes,
+    };
 
-    // later → call API here
+    try {
+      await api.post("/patients/", payload);
+
+      // close modal or refresh list
+      onClose?.();
+
+    } catch (error) {
+      console.error("Failed to create patient", error);
+    }
   }
+
 
   return (
     <div className="ap-container">

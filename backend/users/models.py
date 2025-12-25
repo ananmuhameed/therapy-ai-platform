@@ -25,7 +25,7 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
 
-    is_therapist = models.BooleanField(default=False)
+    is_therapist = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -55,6 +55,8 @@ class TherapistProfile(models.Model):
     clinic_name = models.CharField(max_length=255, blank=True)
     country = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100, blank=True)
+
+    is_completed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

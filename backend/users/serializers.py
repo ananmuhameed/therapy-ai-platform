@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from users.models import TherapistProfile
 
 User = get_user_model()
 
@@ -46,6 +47,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         # Uses your UserManager => hashes password + normalizes email
         user = User.objects.create_user(password=password, **validated_data)
+        # Auto-create therapist profile on registration
+        TherapistProfile.objects.get_or_create(user=user)
         return user
 
 class UserPublicSerializer(serializers.ModelSerializer):
