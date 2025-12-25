@@ -1,4 +1,4 @@
-
+import api from "../api/axiosInstance";
 /* DONT DELETE ANY COMMENTED LINES FOR NOW PLEASE ANAN, BUT YOU CAN REPLACE WITH THE ACTUAL THINGS */
 
 import { useEffect, useState } from "react";
@@ -30,6 +30,8 @@ export default function PatientProfile() {
     contact_email: "",
     notes: "",
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [sessions, setSessions] = useState([]);
 
@@ -46,21 +48,31 @@ export default function PatientProfile() {
     return age;
   };
 
-  /* =========================
-     FETCH DATA 
-  ========================== */
-
   useEffect(() => {
-    // TODO: FETCH PATIENT
-    // axios.get(`/api/patients/${patientId}/`)
-    //   .then(res => setPatient(res.data));
+    const fetchPatientAndSessions = async () => {
+      setLoading(true);
+      setError("");
 
-    // TODO: FETCH SESSIONS HISTORY
-    // axios.get(`/api/sessions/?patient_id=${patientId}`)
-    //   .then(res => setSessions(res.data));
+      try {
+        const patientRes = await api.get(`/patients/${patientId}/`);
+        setPatient(patientRes.data);
 
-    // PLACEHOLDER (safe)
-    setSessions([]);
+        //SESSIONS HISTORY (optional - only if you have this endpoint)
+        setSessions([]); // keep placeholder for now
+      } catch (err) {
+        console.error(err);
+        const status = err?.response?.status;
+        let msg = "Failed to load patient profile.";
+        if (status === 401) msg = "Unauthorized. Please login again.";
+        else if (status === 403) msg = "Forbidden. You don’t have permission.";
+        else if (status === 404) msg = "Patient not found.";
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (patientId) fetchPatientAndSessions();
   }, [patientId]);
 
   /* =========================
@@ -71,25 +83,53 @@ export default function PatientProfile() {
     setPatient((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // TODO: PATCH /api/patients/:id/
-    // axios.patch(`/api/patients/${patientId}/`, patient);
+  const handleSave = async () => {
+    try {
+      setError("");
 
-    setIsEditing(false);
+      const payload = {
+        full_name: patient.full_name,
+        gender: patient.gender,
+        date_of_birth: patient.date_of_birth,
+        contact_phone: patient.contact_phone,
+        contact_email: patient.contact_email,
+        notes: patient.notes,
+      };
+
+      const res = await api.patch(`/patients/${patientId}/`, payload);
+      setPatient(res.data);
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      const status = err?.response?.status;
+      let msg = "Failed to save changes.";
+      if (status === 400) msg = "Invalid data. Please check the fields.";
+      else if (status === 401) msg = "Unauthorized. Please login again.";
+      else if (status === 403) msg = "Forbidden. You don’t have permission.";
+      setError(msg);
+    }
   };
 
-  const handleDelete = () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this patient profile?"
-    );
-    if (!confirmed) return;
+ const handleDelete = async () => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this patient profile?"
+  );
+  if (!confirmed) return;
 
-    // TODO: DELETE /api/patients/:id/
-    // axios.delete(`/api/patients/${patientId}/`)
-    //   .then(() => navigate("/patients"));
-
+  try {
+    setError("");
+    await api.delete(`/patients/${patientId}/`);
     navigate("/patients");
-  };
+  } catch (err) {
+    console.error(err);
+    const status = err?.response?.status;
+    let msg = "Failed to delete patient.";
+    if (status === 401) msg = "Unauthorized. Please login again.";
+    else if (status === 403) msg = "Forbidden. You don’t have permission.";
+    setError(msg);
+  }
+};
+
 
   /* =========================
      RENDER
@@ -103,7 +143,6 @@ export default function PatientProfile() {
           className="flex items-center gap-2 text-[#3078E2] font-medium"
         >
           <FiArrowLeft size={24} />
-          
         </button>
 
         <div className="flex gap-3">
@@ -190,46 +229,45 @@ export default function PatientProfile() {
         )}
       </div>
 
-<div className="bg-white rounded-xl shadow p-6 mb-6">
-  <h2 className="font-semibold mb-4">Contact Info</h2>
+      <div className="bg-white rounded-xl shadow p-6 mb-6">
+        <h2 className="font-semibold mb-4">Contact Info</h2>
 
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-5.5 place-self-center">
-    <div className="flex items-center gap-2 border border-white shadow rounded-2xl p-2 w-65 ">
-      <FiPhone className="text-[#3078E2]" />
-      {isEditing ? (
-        <input
-          name="contact_phone"
-          value={patient.contact_phone}
-          onChange={handleChange}
-          placeholder="Phone"
-          className="w-full outline-none text-sm"
-        />
-      ) : (
-        <span className="text-sm text-[#727473]">
-          {patient.contact_phone || "No phone"}
-        </span>
-      )}
-    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5.5 place-self-center">
+          <div className="flex items-center gap-2 border border-white shadow rounded-2xl p-2 w-65 ">
+            <FiPhone className="text-[#3078E2]" />
+            {isEditing ? (
+              <input
+                name="contact_phone"
+                value={patient.contact_phone}
+                onChange={handleChange}
+                placeholder="Phone"
+                className="w-full outline-none text-sm"
+              />
+            ) : (
+              <span className="text-sm text-[#727473]">
+                {patient.contact_phone || "No phone"}
+              </span>
+            )}
+          </div>
 
-    <div className="flex items-center gap-2 border border-white shadow rounded-2xl p-2 w-65">
-      <FiMail className="text-[#3078E2]" />
-      {isEditing ? (
-        <input
-          name="contact_email"
-          value={patient.contact_email}
-          onChange={handleChange}
-          placeholder="Email"
-          className="w-full outline-none text-sm"
-        />
-      ) : (
-        <span className="text-sm text-[#727473]">
-          {patient.contact_email || "No email"}
-        </span>
-      )}
-    </div>
-  </div>
-</div>
-
+          <div className="flex items-center gap-2 border border-white shadow rounded-2xl p-2 w-65">
+            <FiMail className="text-[#3078E2]" />
+            {isEditing ? (
+              <input
+                name="contact_email"
+                value={patient.contact_email}
+                onChange={handleChange}
+                placeholder="Email"
+                className="w-full outline-none text-sm"
+              />
+            ) : (
+              <span className="text-sm text-[#727473]">
+                {patient.contact_email || "No email"}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -255,12 +293,10 @@ export default function PatientProfile() {
                 className="grid grid-cols-4 items-center text-sm py-3 border-b last:border-b-0"
               >
                 <span>#{i + 1}</span>
-                <span>
-                  {new Date(s.session_date).toLocaleDateString()}
-                </span>
+                <span>{new Date(s.session_date).toLocaleDateString()}</span>
                 <span className="capitalize">{s.status}</span>
                 <button
-                /* we will replace history with the actual path when we make the session view page */
+                  /* we will replace history with the actual path when we make the session view page */
                   onClick={() => navigate(`/history/${s.id}`)}
                   className="flex justify-end text-[#3078E2]"
                 >

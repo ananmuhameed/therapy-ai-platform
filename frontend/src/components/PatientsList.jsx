@@ -4,6 +4,18 @@ import { FaChevronDown } from "react-icons/fa6";
 import { FaSearch, FaArrowCircleRight } from "react-icons/fa";
 import { IoAddCircleOutline } from "react-icons/io5";
 
+const calcAge = (dob) => {
+  if (!dob) return "—";
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return "—";
+
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age < 0 ? "—" : age;
+};
+
 const PatientsList = ({ onAddPatient, onViewProfile }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +60,8 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
       const gender = (p.gender || "").toLowerCase();
 
       const matchSearch = !q || name.includes(q);
-      const matchGender = filterGender === "all" || gender === filterGender.toLowerCase();
+      const matchGender =
+        filterGender === "all" || gender === filterGender.toLowerCase();
 
       return matchSearch && matchGender;
     });
@@ -68,7 +81,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
               <select
                 value={filterGender}
                 onChange={(e) => setFilterGender(e.target.value)}
-                className="appearance-none px-6 py-3 rounded-full bg-[#f5f5f5] text-[#727473] w-44 outline-none"
+                className="appearance-none px-6 py-3 rounded-full bg-[#f5f5f5] text-[#444] font-medium w-44 outline-none capitalize"
               >
                 <option value="all">Filter by</option>
                 <option value="female">Female</option>
@@ -135,7 +148,7 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
               {filteredPatients.map((p) => {
                 const name = p.full_name || p.name || "—";
                 const gender = p.gender || "—";
-                const age = p.age ?? "—";
+                const age = p.age ?? calcAge(p.date_of_birth);
 
                 const lastSession =
                   p.last_session || p.last_session_date || p.lastSession || "—";
@@ -153,9 +166,9 @@ const PatientsList = ({ onAddPatient, onViewProfile }) => {
                     <div className="col-span-1 flex justify-end">
                       <button
                         onClick={() => onViewProfile?.(p)}
-                        className="text-[#222] font-semibold flex items-center gap-2"
+                        className="text-[#222] font-semibold flex items-center gap-2 whitespace-nowrap"
                       >
-                        view profile
+                        View profile
                         <FaArrowCircleRight />
                       </button>
                     </div>
