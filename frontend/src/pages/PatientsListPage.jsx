@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams , useNavigate} from "react-router-dom";
 import PatientsList from "../components/PatientsList";
 import AddPatientForm from "../components/AddPatientForm/AddPatientForm";
 
 const PatientsListPage = () => {
+  const navigate = useNavigate();
   const [showAddPatient, setShowAddPatient] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -43,7 +44,7 @@ const PatientsListPage = () => {
     <div className="w-full flex justify-center px-10 py-14">
       <PatientsList
         onAddPatient={() => setShowAddPatient(true)}
-        onViewProfile={(p) => console.log("view profile", p)}
+        onViewProfile={(p) => navigate(`/patients/${p.id}`)}
       />
 
       {showAddPatient && (
@@ -59,7 +60,10 @@ export default PatientsListPage;
 
 function Modal({ children, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onClick={onClose}
+    >
       <div className="absolute inset-0 bg-black/40" />
       <div
         className="relative w-full max-w-[520px] rounded-2xl bg-white shadow-2xl p-6"
