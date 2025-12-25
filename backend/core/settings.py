@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "patients",
     "therapy_sessions.apps.TherapySessionsConfig",
-
+    "dashboard.apps.DashboardConfig",
 ]
 
 REST_FRAMEWORK = {
