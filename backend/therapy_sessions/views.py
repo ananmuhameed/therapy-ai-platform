@@ -1,13 +1,19 @@
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from .models import SessionAudio, TherapySession
-from .serializers import SessionAudioUploadSerializer, TherapySessionSerializer
-from .tasks import transcribe_session
+from therapy_sessions.models import SessionAudio, TherapySession
+from therapy_sessions.serializers import (
+    TherapySessionSerializer,
+    SessionAudioUploadSerializer,
+    SessionTranscriptSerializer,
+    SessionReportSerializer,
+    SessionReportNotesSerializer,
+)
+from therapy_sessions.tasks import transcribe_session
+from therapy_sessions.models import SessionTranscript, SessionReport
 
 
 class TherapySessionViewSet(viewsets.ModelViewSet):
@@ -60,8 +66,8 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             locked.last_error_message = ""
             locked.save(update_fields=["status", "last_error_stage", "last_error_message", "updated_at"])
 
+            # enqueue transcription task after DB commit
             transaction.on_commit(lambda: transcribe_session.delay(locked.id))
-
 
         return Response(
             {"detail": "Upload successful. Transcription started.", "audio_id": audio.id},
@@ -109,8 +115,8 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             locked.last_error_message = ""
             locked.save(update_fields=["status", "last_error_stage", "last_error_message", "updated_at"])
 
+            # enqueue transcription task after DB commit
             transaction.on_commit(lambda: transcribe_session.delay(locked.id))
-
 
         return Response(
             {"detail": "Audio replaced. Transcription restarted.", "audio_id": new_audio.id},
