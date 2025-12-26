@@ -7,6 +7,7 @@ import Signup from "./pages/Signup";
 import PatientsListPage from "./pages/PatientsListPage";
 import Session from "./pages/SessionPage";
 import PatientProfile from "./pages/PatientProfile";  
+import SessionDetail from "./pages/SessionDetails";
 function App() {
   return (
     <HashRouter>
@@ -15,6 +16,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/patients/:patientId" element={<PatientProfile />} />
+        <Route path="/sessions/:sessionId" element={<SessionDetail />} />
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sessions/new" element={<Session />} />
