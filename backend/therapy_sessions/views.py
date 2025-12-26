@@ -1,27 +1,29 @@
 from django.db import transaction
+
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from therapy_sessions.models import SessionAudio, TherapySession
-from therapy_sessions.serializers import (
-    TherapySessionSerializer,
-    SessionAudioUploadSerializer,
-    SessionTranscriptSerializer,
-    SessionReportSerializer,
-    SessionReportNotesSerializer,
-)
+from therapy_sessions.models import TherapySession, SessionAudio
 from therapy_sessions.tasks import transcribe_session
-from therapy_sessions.models import SessionTranscript, SessionReport
 
+from therapy_sessions.serializers.session import TherapySessionSerializer, SessionDetailSerializer
+from therapy_sessions.serializers.audio import SessionAudioUploadSerializer
 
 class TherapySessionViewSet(viewsets.ModelViewSet):
     serializer_class = TherapySessionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return SessionDetailSerializer
+        return TherapySessionSerializer
+ 
     def get_queryset(self):
-        qs = TherapySession.objects.select_related("patient").filter(therapist=self.request.user)
+        qs = TherapySession.objects.select_related(
+         "patient", "audio", "transcript", "report"
+        ).filter(therapist=self.request.user)
 
         patient_id = self.request.query_params.get("patient_id")
         if patient_id:

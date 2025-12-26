@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from patients.models import Patient
 from therapy_sessions.models import TherapySession
+from therapy_sessions.serializers.audio import SessionAudioSerializer
+from therapy_sessions.serializers.transcript import SessionTranscriptSerializer
+from therapy_sessions.serializers.report import SessionReportSerializer
 
 
 class TherapySessionSerializer(serializers.ModelSerializer):
@@ -27,3 +30,26 @@ class TherapySessionSerializer(serializers.ModelSerializer):
                     "You can only create sessions for your own patients."
                 )
         return patient
+
+class SessionDetailSerializer(serializers.ModelSerializer):
+    audio = SessionAudioSerializer(read_only=True)
+    transcript = SessionTranscriptSerializer(read_only=True)
+    report = SessionReportSerializer(read_only=True)
+
+    class Meta:
+        model = TherapySession
+        fields = [
+            "id",
+            "patient",
+            "session_date",
+            "duration_minutes",
+            "status",
+            "notes_before",
+            "notes_after",
+            "created_at",
+            "updated_at",
+            "audio",
+            "transcript",
+            "report",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
