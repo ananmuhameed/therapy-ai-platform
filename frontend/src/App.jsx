@@ -9,6 +9,7 @@ import Signup from "./pages/Signup";
 import PatientsListPage from "./pages/PatientsListPage";
 import Session from "./pages/SessionPage";
 import PatientProfile from "./pages/PatientProfile";
+import SessionDetail from "./pages/SessionDetails";
 function App() {
   const navigate = useNavigate();
 
@@ -17,7 +18,6 @@ function App() {
   }, [navigate]);
 
   return (
-    <HashRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/signup" element={<Signup />} />
@@ -30,7 +30,6 @@ function App() {
           <Route path="/patients" element={<PatientsListPage />} />
         </Route>
       </Routes>
-    </HashRouter>
   );
 }
 
