@@ -1,3 +1,6 @@
+import api from "../api/axiosInstance";
+import { redirectToLogin } from "./navigation";
+
 export const STORAGE_KEYS = {
   USER: "user",
 };
@@ -48,3 +51,14 @@ export const clearAuth = () => {
   clearAccessToken();
   clearUser();
 };
+
+export async function logout() {
+  try {
+    await api.post("/auth/logout/");
+  } catch (e) {
+    // even if backend fails, we still clear client state
+  } finally {
+    clearAuth();
+    redirectToLogin();
+  }
+}
