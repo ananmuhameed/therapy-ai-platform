@@ -1,4 +1,20 @@
 from rest_framework import serializers
+from therapy_sessions.models import SessionAudio
+
+
+class SessionAudioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SessionAudio
+        fields = [
+            "id",
+            "audio_file",
+            "original_filename",
+            "duration_seconds",
+            "sample_rate",
+            "language_code",
+            "uploaded_at",
+        ]
+        read_only_fields = fields
 
 
 class SessionAudioUploadSerializer(serializers.Serializer):
