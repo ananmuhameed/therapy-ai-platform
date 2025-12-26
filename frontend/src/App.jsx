@@ -8,6 +8,8 @@ import PatientsListPage from "./pages/PatientsListPage";
 import Session from "./pages/SessionPage";
 import PatientProfile from "./pages/PatientProfile";
 import SessionsListPage from "./pages/SessionsListPage";
+import ReportsPage from "./pages/ReportsPage";
+
 
 function App() {
   return (
@@ -27,6 +29,9 @@ function App() {
           {/* Patients */}
           <Route path="/patients" element={<PatientsListPage />} />
           <Route path="/patients/:patientId" element={<PatientProfile />} />
+
+          {/* Reports */}
+          <Route path="/reports" element={<ReportsPage />} />
         </Route>
 
       </Routes>
