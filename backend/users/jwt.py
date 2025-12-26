@@ -1,43 +1,87 @@
+# users/jwt.py
+from django.conf import settings
 from django.contrib.auth import authenticate
-from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
-
 from .serializers import UserPublicSerializer
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.exceptions import InvalidToken
 
-class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Extends SimpleJWT to:
-    - accept email + password
-    - return tokens + user public payload
-    """
+REFRESH_COOKIE = "refresh_token"
 
-    # Force the input field to be "email" instead of "username"
-    username_field = "email"
+def set_refresh_cookie(response, refresh_token: str):
+    secure = not settings.DEBUG  # dev http => False, prod https => True
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=refresh_token,
+        httponly=True,
+        secure=secure,
+        samesite="Lax",     # if you deploy frontend+backend on different domains, you may need "None" + Secure=True
+        path="/api/v1/auth/",
+        max_age=14 * 24 * 60 * 60,
+    )
 
-    def validate(self, attrs):
-        # attrs contains { "email": ..., "password": ... }
-        credentials = {
-            self.username_field: attrs.get(self.username_field),
-            "password": attrs.get("password"),
-        }
-        # authenticate() expects keyword matching USERNAME_FIELD, which is "email" in our case
-        # hashe's password and compares with hashed password in DB
-        #if either email or password is wrong returns None
-        user = authenticate(**credentials)
+def clear_refresh_cookie(response):
+    response.delete_cookie(
+        key=REFRESH_COOKIE,
+        path="/api/v1/auth/",
+        samesite="Lax",
+    )
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Adjust these fields to match your login payload
+        email = request.data.get("email")
+        password = request.data.get("password")
+
+        # If your USERNAME_FIELD is email, this is fine.
+        user = authenticate(request, username=email, password=password)
         if not user:
-            raise serializers.ValidationError("Invalid email or password.")
+            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not user.is_active:
-            raise serializers.ValidationError("This account is disabled.")
+        refresh = RefreshToken.for_user(user)
+        access = str(refresh.access_token)
 
-        # SimpleJWT generates refresh and access tokens using already validated user
-        data = super().validate(attrs)
+        resp = Response({"access": access, "user": UserPublicSerializer(user).data}, status=status.HTTP_200_OK)
+        set_refresh_cookie(resp, str(refresh))
+        return resp
 
-        # Add user payload for frontend convenience
-        data["user"] = UserPublicSerializer(user).data
-        return data
+class CookieTokenRefreshView(TokenRefreshView):
+    permission_classes = [AllowAny]
 
+    def post(self, request, *args, **kwargs):
+        refresh = request.COOKIES.get(REFRESH_COOKIE)
+        if not refresh:
+            raise InvalidToken("No refresh token cookie")
 
-class LoginView(TokenObtainPairView):
-    serializer_class = EmailTokenObtainPairSerializer
+        request.data["refresh"] = refresh
+        response = super().post(request, *args, **kwargs)
+
+        # If rotate refresh is enabled, SimpleJWT returns a new refresh in response.data["refresh"]
+        new_refresh = response.data.get("refresh")
+        if new_refresh:
+            set_refresh_cookie(response, new_refresh)
+            # Never expose refresh to JS
+            del response.data["refresh"]
+
+        return response
+
+@api_view(["POST"])
+def logout_view(request):
+    refresh = request.COOKIES.get(REFRESH_COOKIE)
+    resp = Response({"detail": "Logged out"}, status=status.HTTP_200_OK)
+
+    if refresh:
+        try:
+            RefreshToken(refresh).blacklist()
+        except Exception:
+            pass
+
+    clear_refresh_cookie(resp)
+    return resp
