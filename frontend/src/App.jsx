@@ -1,4 +1,6 @@
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { setNavigate } from "./auth/navigation";
 import "./index.css";
 import MainLayout from "./layouts/MainLayout";
 import Dashboard from "./pages/Dashboard";
@@ -6,9 +8,14 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import PatientsListPage from "./pages/PatientsListPage";
 import Session from "./pages/SessionPage";
-import PatientProfile from "./pages/PatientProfile";  
-import SessionDetail from "./pages/SessionDetails";
+import PatientProfile from "./pages/PatientProfile";
 function App() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setNavigate(navigate);
+  }, [navigate]);
+
   return (
     <HashRouter>
       <Routes>

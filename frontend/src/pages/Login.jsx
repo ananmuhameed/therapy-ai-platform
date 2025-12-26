@@ -41,7 +41,6 @@ const handleSubmit = async () => {
     // Save tokens + user
     setAuth({
       accessToken: data.access,
-      refreshToken: data.refresh,
       user: data.user,
     });
 
