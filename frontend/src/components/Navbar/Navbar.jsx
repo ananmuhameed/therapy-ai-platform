@@ -28,11 +28,14 @@ const Navbar = () => {
       </div>
 
       {/* Profile Button */}
+       <NavLink to="/therapistprofile">
       <button className="flex items-center gap-2 bg-[#3078E2] text-white px-5 py-2 rounded-full text-sm font-medium hover:opacity-90 transition">
-        <FaUserCircle size={18} />
+       
+          <FaUserCircle size={18} />
+       
         Profile
       </button>
-
+ </NavLink>
     </nav>
     </>
   )

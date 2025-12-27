@@ -9,6 +9,7 @@ import Signup from "./pages/Signup";
 import PatientsListPage from "./pages/PatientsListPage";
 import Session from "./pages/SessionPage";
 import PatientProfile from "./pages/PatientProfile";
+import TherapistProfile from "./pages/TherapistProfile";
 function App() {
   const navigate = useNavigate();
 
@@ -22,6 +23,7 @@ function App() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route path="/patients/:patientId" element={<PatientProfile />} />
+      <Route path="/therapistprofile" element={<TherapistProfile />} />
       <Route element={<MainLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/sessions/new" element={<Session />} />
