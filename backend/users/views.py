@@ -7,7 +7,7 @@ from .models import TherapistProfile
 from .serializers import RegisterSerializer, TherapistProfileUpdateSerializer, UserPublicSerializer,TherapistProfileSerializer
 
 class RegisterView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny] 
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
