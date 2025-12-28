@@ -3,16 +3,16 @@ import { useEffect } from "react";
 import { setNavigate } from "./auth/navigation";
 import "./index.css";
 import MainLayout from "./layouts/MainLayout";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import PatientsListPage from "./pages/PatientsListPage";
-import Session from "./pages/SessionPage";
-import PatientProfile from "./pages/PatientProfile";
-import TherapistProfile from "./pages/TherapistProfile";
-import SessionDetail from "./pages/SessionDetails";
-import SessionsListPage from "./pages/SessionsListPage";
-import ReportsPage from "./pages/ReportsPage";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import Login from "./pages/Login/Login";
+import Signup from "./pages/Signup/Signup";
+import PatientsListPage from "./pages/PatientList/PatientsListPage";
+import Session from "./pages/Session/SessionPage";
+import PatientProfile from "./pages/PatientProfile/PatientProfile";
+import TherapistProfile from "./pages/TherapistProfile/TherapistProfile";
+import SessionDetail from "./pages/SessionDetails/SessionDetails";
+import SessionsListPage from "./pages/SessionsList/SessionsListPage";
+import ReportsPage from "./pages/Report/ReportsPage";
 
 function App() {
   const navigate = useNavigate();
