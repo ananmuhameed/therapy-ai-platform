@@ -1,0 +1,39 @@
+import React from "react";
+import { FiMic, FiUploadCloud } from "react-icons/fi";
+
+export default function SessionActionButtons({ 
+  onStart, 
+  onUpload, 
+  canProceed, 
+  isUploading 
+}) {
+  const btnBase = "min-w-[260px] h-[74px] px-6 rounded-[18px] border border-black/5 bg-[#F5F5F5] flex items-center justify-center gap-3.5 transition-all";
+  const btnActive = "cursor-pointer hover:bg-gray-200 active:scale-[0.98]";
+  const btnDisabled = "opacity-55 cursor-not-allowed";
+
+  return (
+    <div className="w-full max-w-[620px] flex flex-wrap items-center justify-center gap-6">
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={!canProceed}
+        className={`${btnBase} ${canProceed ? btnActive : btnDisabled}`}
+      >
+        <FiMic size={22} className="text-black/85" />
+        <span className="text-base font-semibold text-black">Start Recording</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={onUpload}
+        disabled={!canProceed || isUploading}
+        className={`${btnBase} ${canProceed && !isUploading ? btnActive : btnDisabled}`}
+      >
+        <FiUploadCloud size={22} className="text-black/85" />
+        <span className="text-base font-semibold text-black">
+          {isUploading ? "Uploading..." : "Upload Audio"}
+        </span>
+      </button>
+    </div>
+  );
+}
