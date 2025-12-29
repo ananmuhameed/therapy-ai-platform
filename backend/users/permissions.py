@@ -1,18 +1,11 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from rest_framework.exceptions import PermissionDenied
 
 
 class IsTherapistProfileCompleted(BasePermission):
     """
-    Allows access only to therapists who have completed their profile.
-
-    This permission is intended to protect write actions (POST / PATCH / DELETE)
-    such as:
-    - Creating patients
-    - Creating therapy sessions
-
-    Therapists with incomplete profiles can still READ data,
-    but cannot perform restricted actions.
+    Allows therapists to READ data even if profile is incomplete.
+    Blocks WRITE actions (POST, PATCH, DELETE) until profile is completed.
     """
 
     message = "Please complete your profile before performing this action."
@@ -20,18 +13,22 @@ class IsTherapistProfileCompleted(BasePermission):
     def has_permission(self, request, view):
         user = request.user
 
-        # Safety check (should already be authenticated)
+        # must be authenticated
         if not user or not user.is_authenticated:
             return False
 
-        # If user is NOT a therapist, block
+        # allow SAFE methods (GET, HEAD, OPTIONS)
+        if request.method in SAFE_METHODS:
+            return True
+
+        # must be therapist
         if not getattr(user, "is_therapist", False):
             raise PermissionDenied("Only therapists can perform this action.")
 
-        # If therapist has no profile, treat as incomplete
+        # must have profile
         profile = getattr(user, "therapist_profile", None)
         if not profile:
             return False
 
-        # Final decision: profile must be completed
+        # WRITE actions require completed profile
         return profile.is_completed is True
