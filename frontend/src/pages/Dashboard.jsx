@@ -9,11 +9,17 @@ function classNames(...xs) {
 }
 
 function Skeleton({ className }) {
-  return <div className={classNames("animate-pulse rounded-md bg-gray-200/70", className)} />;
+  return (
+    <div className={classNames("animate-pulse rounded-md bg-gray-200/70", className)} />
+  );
 }
 
-function StatusPill({ status }) {
-  const s = String(status || "").toLowerCase();
+/**
+ * rawStatus controls styling. statusText is what user sees.
+ * This prevents breaking pill colors when you change label formatting.
+ */
+function StatusPill({ rawStatus, statusText }) {
+  const s = String(rawStatus || "").toLowerCase();
   const styles = {
     empty: "bg-gray-100 text-gray-600 ring-gray-200",
     uploaded: "bg-blue-50 text-blue-700 ring-blue-100",
@@ -30,8 +36,9 @@ function StatusPill({ status }) {
         "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
         styles[s] || "bg-gray-100 text-gray-600 ring-gray-200"
       )}
+      title={statusText || rawStatus || "—"}
     >
-      {status || "—"}
+      {statusText || rawStatus || "—"}
     </span>
   );
 }
@@ -130,8 +137,8 @@ export default function Dashboard() {
     return d.toLocaleDateString(undefined, { month: "short", day: "2-digit" });
   };
 
-  const statusLabel = (status) => {
-    const s = String(status || "").toLowerCase();
+  const statusText = (rawStatus) => {
+    const s = String(rawStatus || "").toLowerCase();
     const map = {
       empty: "Empty",
       uploaded: "Uploaded",
@@ -141,7 +148,7 @@ export default function Dashboard() {
       completed: "Completed",
       failed: "Failed",
     };
-    return map[s] || status || "—";
+    return map[s] || rawStatus || "—";
   };
 
   const recentSessions = useMemo(() => {
@@ -152,13 +159,18 @@ export default function Dashboard() {
       return tb - ta;
     });
 
-    return copy.slice(0, 3).map((s, i) => ({
-      id: s.id,
-      indexLabel: `${i + 1}`,
-      name: patientNameById.get(s.patient) || `Patient #${s.patient}`,
-      date: formatDate(s.session_date || s.created_at),
-      status: statusLabel(s.status),
-    }));
+    return copy.slice(0, 3).map((s, i) => {
+      const raw = s.status; // keep raw backend value
+      return {
+        id: s.id,
+        indexLabel: `${i + 1}`,
+        patientId: s.patient,
+        name: patientNameById.get(s.patient) || `Patient #${s.patient}`,
+        date: formatDate(s.session_date || s.created_at),
+        rawStatus: raw,
+        statusText: statusText(raw),
+      };
+    });
   }, [sessions, patientNameById]);
 
   if (!user) {
@@ -171,19 +183,19 @@ export default function Dashboard() {
 
   return (
     <div className="p-10 space-y-8">
-      {/* Title (keep old UI) */}
+      {/* Title */}
       <h1 style={{ fontSize: 32, color: "#727473" }} className="font-semibold">
         Therapist Dashboard
       </h1>
 
-      {/* Stats (keep old UI) */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatBox icon={<FiUsers size={22} />} label="Patients" value={stats.patients_count} />
         <StatBox icon={<FiMic size={22} />} label="Sessions this week" value={stats.sessions_this_week} />
         <StatBox icon={<FiFileText size={22} />} label="Reports Ready" value={stats.reports_ready} />
       </div>
 
-      {/* Actions (keep old UI) */}
+      {/* Actions */}
       <div className="flex gap-4 items-center">
         <GradientButton ariaLabel="Add patient" onClick={() => navigate("/patients?add=1")}>
           <FiPlus size={18} />
@@ -212,7 +224,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* header row (Status is its own column after Patient) */}
+        {/* header row */}
         <div className="grid grid-cols-12 text-xs font-medium text-gray-500 px-2 pb-2">
           <div className="col-span-1">#</div>
           <div className="col-span-5">Patient</div>
@@ -246,15 +258,11 @@ export default function Dashboard() {
           {!sessionsLoading &&
             !sessionsError &&
             recentSessions.map((row) => (
-              <div
+              <button
                 key={row.id}
+                type="button"
                 onClick={() => navigate(`/sessions/${row.id}`)}
-                className="grid grid-cols-12 items-center px-2 py-3 bg-white hover:bg-gray-50 transition cursor-pointer"
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") navigate(`/sessions/${row.id}`);
-                }}
+                className="w-full grid grid-cols-12 items-center px-2 py-3 bg-white hover:bg-gray-50 transition text-left"
                 title="Open session"
               >
                 <div className="col-span-1 text-sm text-gray-700">{row.indexLabel}</div>
@@ -264,7 +272,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="col-span-3">
-                  <StatusPill status={row.status} />
+                  <StatusPill rawStatus={row.rawStatus} statusText={row.statusText} />
                 </div>
 
                 <div className="col-span-2 text-sm text-gray-700">{row.date}</div>
@@ -283,12 +291,12 @@ export default function Dashboard() {
                     <FiEye />
                   </button>
                 </div>
-              </div>
+              </button>
             ))}
         </div>
       </div>
 
-      {/* Debug helper (development only) */}
+      {/* Debug helper */}
       {import.meta.env.DEV && (
         <pre className="text-xs bg-gray-100 p-4 rounded">
           {JSON.stringify({ user, stats, recentSessions }, null, 2)}
