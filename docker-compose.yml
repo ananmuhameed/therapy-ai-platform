@@ -28,9 +28,7 @@ services:
     env_file:
       - .env
     build: ./backend
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+    command: ["/app/entrypoint.sh"]
     volumes:
       - ./backend:/app
     ports:
