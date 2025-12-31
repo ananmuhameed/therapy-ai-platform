@@ -2,8 +2,9 @@ from django.conf import settings
 from django.db import models
 from patients.models import Patient
 
+from core.models import TimeStampedModel
 
-class TherapySession(models.Model):
+class TherapySession(TimeStampedModel):
     STATUS_CHOICES = [
         ("empty", "Empty"),                 # session created, no audio yet
         ("uploaded", "Uploaded"),           # audio uploaded
@@ -40,9 +41,6 @@ class TherapySession(models.Model):
 
     notes_before = models.TextField(blank=True)
     notes_after = models.TextField(blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "therapy_session"
