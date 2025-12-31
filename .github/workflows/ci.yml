@@ -29,7 +29,7 @@ jobs:
 
     env:
       DJANGO_SETTINGS_MODULE: core.settings
-      SECRET_KEY: ci-secret-key-not-for-production
+      DJANGO_SECRET_KEY: ci-secret-key-not-for-production
       POSTGRES_DB: ci_db
       POSTGRES_USER: ci_user
       POSTGRES_PASSWORD: ci_pass
