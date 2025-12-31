@@ -48,7 +48,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Install backend dependencies
-        run: uv pip install -r requirements.txt
+        run: uv pip install --system -r requirements.txt
 
       - name: Run migrations
         run: python manage.py migrate --noinput
