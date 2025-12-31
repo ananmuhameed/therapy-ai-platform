@@ -30,11 +30,11 @@ jobs:
     env:
       DJANGO_SETTINGS_MODULE: core.settings
       SECRET_KEY: ci-secret-key-not-for-production
-      DB_NAME: ci_db
-      DB_USER: ci_user
-      DB_PASSWORD: ci_pass
-      DB_HOST: 127.0.0.1
-      DB_PORT: "5432"
+      POSTGRES_DB: ci_db
+      POSTGRES_USER: ci_user
+      POSTGRES_PASSWORD: ci_pass
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
 
     steps:
       - name: Checkout repository
