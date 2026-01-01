@@ -56,7 +56,11 @@ class SessionAudio(TimeStampedModel):
         on_delete=models.CASCADE, # when session is deleted, delete audio too
         related_name="audio", # one-to-one relationship when c
     )
-    audio_file = models.FileField(upload_to="recordings/") # path to the file
+
+    def session_audio_path(instance, filename):
+        return f"recordings/patient_{instance.session.patient_id}/session_{instance.session.id}/{filename}"
+    
+    audio_file = models.FileField(upload_to=session_audio_path) # path to the file
     original_filename = models.CharField(max_length=255) # original file name uploaded
     
     duration_seconds = models.PositiveIntegerField(null=True, blank=True) # in seconds
