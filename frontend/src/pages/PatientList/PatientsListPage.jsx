@@ -1,13 +1,15 @@
-import  { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/axiosInstance";
 
 // Components
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
+import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 
 export default function PatientsListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // --- State ---
   const [patients, setPatients] = useState([]);
@@ -16,7 +18,7 @@ export default function PatientsListPage() {
 
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
-
+  const [showAdd, setShowAdd] = useState(false);
   // --- Logic ---
   const fetchPatients = async () => {
     setLoading(true);
@@ -47,13 +49,19 @@ export default function PatientsListPage() {
     fetchPatients();
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setShowAdd(params.get("add") === "1");
+  }, [location.search]);
+
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
     return patients.filter((p) => {
       const name = (p.full_name || p.name || "").toLowerCase();
       const gender = String(p.gender || "").toLowerCase();
       const matchSearch = !q || name.includes(q);
-      const matchGender = filterGender === "all" || gender === filterGender.toLowerCase();
+      const matchGender =
+        filterGender === "all" || gender === filterGender.toLowerCase();
       return matchSearch && matchGender;
     });
   }, [patients, search, filterGender]);
@@ -69,15 +77,18 @@ export default function PatientsListPage() {
   };
 
   const handleAddPatient = () => {
-    // Navigate with query param to trigger modal in MainLayout or local modal logic
     navigate("/patients?add=1");
+  };
+  const closeAddModal = () => {
+    setShowAdd(false);
+    navigate("/patients", { replace: true });
+    fetchPatients();
   };
 
   return (
     <div className="w-full p-6 sm:p-8">
-      
       {/* 1. Controls Section */}
-      <PatientsControls 
+      <PatientsControls
         totalLabel={totalLabel}
         search={search}
         setSearch={setSearch}
@@ -88,17 +99,34 @@ export default function PatientsListPage() {
       />
 
       {/* 2. Table Section */}
-      <PatientsTable 
+      <PatientsTable
         loading={loading}
         error={error}
         patients={filteredPatients}
         onViewProfile={handleViewProfile}
         onClearFilters={() => {
-            setSearch("");
-            setFilterGender("all");
+          setSearch("");
+          setFilterGender("all");
         }}
         onAddPatient={handleAddPatient}
       />
+      {/*Add Patient Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50">
+          {/* overlay */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={closeAddModal}
+          />
+
+          {/* modal */}
+          <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+              <AddPatientForm onClose={closeAddModal} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

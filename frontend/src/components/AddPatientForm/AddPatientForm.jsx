@@ -1,54 +1,36 @@
-import { useState } from "react";
-import { FaRegCalendarAlt } from "react-icons/fa";
-import "./AddPatientForm.css";
 import api from "../../api/axiosInstance";
-
+import { useAppFormik } from "../../Forms/useAppFormik";
+import {patientCreateSchema,mapPatientFieldErrors,toPatientCreatePayload,} from "../../Forms/schemas";
+import "./AddPatientForm.css";
 
 export default function AddPatientForm({ onClose }) {
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    countryCode: "+20",
-    phone: "",
-    gender: "",
-    dob: "",
-    notes: "",
-  });
-
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    const payload = {
-      full_name: form.fullName,
-      contact_email: form.email,
-      contact_phone: `${form.countryCode}${form.phone}`,
-      gender: form.gender,
-      date_of_birth: form.dob,
-      notes: form.notes,
-    };
-
-    try {
+  const { formik, apiError } = useAppFormik({
+    initialValues: {
+      fullName: "",
+      email: "",
+      countryCode: "+20",
+      phone: "",
+      gender: "",
+      dob: "",
+      notes: "",
+    },
+    validationSchema: patientCreateSchema,
+    mapFieldErrors: mapPatientFieldErrors,
+    onSubmit: async (values) => {
+      const payload = toPatientCreatePayload(values);
       await api.post("/patients/", payload);
-
-      // close modal or refresh list
       onClose?.();
-
-    } catch (error) {
-      console.error("Failed to create patient", error);
-    }
-  }
-
+    },
+  });
 
   return (
     <div className="ap-container">
       <h1 className="ap-title">New Patient</h1>
 
-      <form className="ap-form" onSubmit={handleSubmit}>
+      {/* Non-field/server error */}
+      {apiError ? <p style={{ color: "red", marginBottom: 12 }}>{apiError}</p> : null}
+
+      <form className="ap-form" onSubmit={formik.handleSubmit}>
         {/* Full Name */}
         <label>
           Full Name
@@ -56,9 +38,13 @@ export default function AddPatientForm({ onClose }) {
             type="text"
             name="fullName"
             placeholder="First and last name"
-            value={form.fullName}
-            onChange={handleChange}
+            value={formik.values.fullName}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
           />
+          {formik.touched.fullName && formik.errors.fullName ? (
+            <small style={{ color: "red" }}>{formik.errors.fullName}</small>
+          ) : null}
         </label>
 
         {/* Email */}
@@ -68,9 +54,13 @@ export default function AddPatientForm({ onClose }) {
             type="email"
             name="email"
             placeholder="example@examole.com"
-            value={form.email}
-            onChange={handleChange}
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
           />
+          {formik.touched.email && formik.errors.email ? (
+            <small style={{ color: "red" }}>{formik.errors.email}</small>
+          ) : null}
         </label>
 
         {/* Phone */}
@@ -79,8 +69,9 @@ export default function AddPatientForm({ onClose }) {
           <div className="ap-phone">
             <select
               name="countryCode"
-              value={form.countryCode}
-              onChange={handleChange}
+              value={formik.values.countryCode}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
             >
               <option value="+20">+20</option>
               <option value="+966">+966</option>
@@ -91,10 +82,14 @@ export default function AddPatientForm({ onClose }) {
               type="tel"
               name="phone"
               placeholder="1234567890"
-              value={form.phone}
-              onChange={handleChange}
+              value={formik.values.phone}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
             />
           </div>
+          {formik.touched.phone && formik.errors.phone ? (
+            <small style={{ color: "red" }}>{formik.errors.phone}</small>
+          ) : null}
         </label>
 
         {/* Gender & DOB */}
@@ -103,13 +98,17 @@ export default function AddPatientForm({ onClose }) {
             Gender
             <select
               name="gender"
-              value={form.gender}
-              onChange={handleChange}
+              value={formik.values.gender}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
             >
               <option value="">Option</option>
               <option value="female">Female</option>
               <option value="male">Male</option>
             </select>
+            {formik.touched.gender && formik.errors.gender ? (
+              <small style={{ color: "red" }}>{formik.errors.gender}</small>
+            ) : null}
           </label>
 
           <label>
@@ -118,11 +117,14 @@ export default function AddPatientForm({ onClose }) {
               <input
                 type="date"
                 name="dob"
-                value={form.dob}
-                onChange={handleChange}
+                value={formik.values.dob}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
               />
-              {/* <FaRegCalendarAlt /> */}
             </div>
+            {formik.touched.dob && formik.errors.dob ? (
+              <small style={{ color: "red" }}>{formik.errors.dob}</small>
+            ) : null}
           </label>
         </div>
 
@@ -132,13 +134,19 @@ export default function AddPatientForm({ onClose }) {
           <textarea
             name="notes"
             placeholder="additional notes"
-            value={form.notes}
-            onChange={handleChange}
+            value={formik.values.notes}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
           />
+          {formik.touched.notes && formik.errors.notes ? (
+            <small style={{ color: "red" }}>{formik.errors.notes}</small>
+          ) : null}
         </label>
 
         {/* Optional */}
-        <button type="submit">Save Patient</button>
+        <button type="submit" disabled={formik.isSubmitting}>
+          {formik.isSubmitting ? "Saving..." : "Save Patient"}
+        </button>
       </form>
     </div>
   );

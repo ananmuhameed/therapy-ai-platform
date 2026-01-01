@@ -2,105 +2,44 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User } from "lucide-react";
 import api from "../../api/axiosInstance";
-
-// Components
+import {signupSchema,toSignupPayload,mapAuthFieldErrors,} from "../../Forms/schemas";
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
-import AuthInput from "../../components/ui/AuthInput"; // Reusing the one created earlier
+import AuthInput from "../../components/ui/AuthInput";
 import SocialButtons from "./SocialButtons";
-
-const isStrongPassword = (password) => {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-  return regex.test(password);
-};
+import { useAppFormik } from "../../Forms/useAppFormik";
 
 export default function Signup() {
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+  const { formik, apiError } = useAppFormik({
+    initialValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+    validationSchema: signupSchema,
+    mapFieldErrors: mapAuthFieldErrors,
+    onSubmit: async (values) => {
+      setMessage("");
+
+      await api.post("/auth/register/", toSignupPayload(values));
+      navigate("/login", { replace: true });
+    },
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    if (e?.preventDefault) e.preventDefault();
-    setError("");
-    setMessage("");
-
-    const fullName = formData.fullName.trim();
-    const email = formData.email.trim();
-
-    if (!fullName || !email || !formData.password || !formData.confirmPassword) {
-      return setError("Please fill all fields.");
-    }
-
-    if (!isStrongPassword(formData.password)) {
-      return setError("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      return setError("Passwords do not match!");
-    }
-
-    setIsSubmitting(true);
-    try {
-      const parts = fullName.split(/\s+/).filter(Boolean);
-      const first_name = parts[0] || "";
-      const last_name = parts.slice(1).join(" ") || "";
-
-      if (!first_name || !last_name) {
-        setIsSubmitting(false);
-        return setError("Please enter your full name (first and last).");
-      }
-
-      await api.post("/auth/register/", {
-        first_name,
-        last_name,
-        email,
-        password: formData.password,
-        password_confirm: formData.confirmPassword,
-      });
-
-      setMessage("Registration done. You can now log in.");
-      navigate("/dashboard", { replace: true });
-    } catch (err) {
-      console.error(err);
-      const data = err?.response?.data;
-      let msg = "Signup failed. Please try again.";
-      if (data) {
-        if (typeof data === "string") msg = data;
-        else if (data.email) msg = Array.isArray(data.email) ? data.email[0] : String(data.email);
-        else if (data.password) msg = Array.isArray(data.password) ? data.password[0] : String(data.password);
-        else msg = JSON.stringify(data);
-      }
-      setError(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // --- Content Blocks ---
   const LeftSide = (
     <>
       <h1 className="text-4xl lg:text-5xl font-bold mb-4 text-[#F0F3FA]">
         Join Our Platform
       </h1>
       <p className="text-base lg:text-lg text-[#ded8d7] leading-relaxed">
-        Join thousands of therapists who trust our platform. Create your
-        account in seconds and unlock all features.
+        Join thousands of therapists who trust our platform. Create your account
+        in seconds and unlock all features.
       </p>
     </>
   );
@@ -114,73 +53,112 @@ export default function Signup() {
         Fill in your details to get started
       </p>
 
-      {error && <p className="mb-4 text-red-500 font-medium">{error}</p>}
+      {/* Server (non-field) error */}
+      {apiError && <p className="mb-4 text-red-500 font-medium">{apiError}</p>}
       {message && <p className="mb-4 text-green-600 font-medium">{message}</p>}
 
-      <div className="space-y-5">
-        <AuthInput
-          id="fullName"
-          name="fullName"
-          label="Full Name"
-          icon={User}
-          value={formData.fullName}
-          onChange={handleChange}
-          placeholder="Your full name"
-          autoComplete="name"
-        />
-        <AuthInput
-          id="email"
-          name="email"
-          label="Email Address"
-          icon={Mail}
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="you@example.com"
-          autoComplete="email"
-        />
-        <AuthInput
-          id="password"
-          name="password"
-          label="Password"
-          icon={Lock}
-          type="password"
-          isPassword={true}
-          showPassword={showPassword}
-          onTogglePassword={() => setShowPassword(!showPassword)}
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="••••••••"
-          autoComplete="new-password"
-        />
-        <AuthInput
-          id="confirmPassword"
-          name="confirmPassword"
-          label="Confirm Password"
-          icon={Lock}
-          type="password"
-          isPassword={true}
-          showPassword={showConfirmPassword}
-          onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          placeholder="••••••••"
-          autoComplete="new-password"
-        />
+      <form onSubmit={formik.handleSubmit} className="space-y-5">
+        <div>
+          <AuthInput
+            id="fullName"
+            name="fullName"
+            label="Full Name"
+            icon={User}
+            value={formik.values.fullName}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="Your full name"
+            autoComplete="name"
+          />
+          {formik.touched.fullName && formik.errors.fullName ? (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.fullName}
+            </p>
+          ) : null}
+        </div>
+
+        <div>
+          <AuthInput
+            id="email"
+            name="email"
+            label="Email Address"
+            icon={Mail}
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+          {formik.touched.email && formik.errors.email ? (
+            <p className="mt-1 text-sm text-red-500">{formik.errors.email}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <AuthInput
+            id="password"
+            name="password"
+            label="Password"
+            icon={Lock}
+            type="password"
+            isPassword={true}
+            showPassword={showPassword}
+            onTogglePassword={() => setShowPassword(!showPassword)}
+            value={formik.values.password}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="••••••••"
+            autoComplete="new-password"
+          />
+          {formik.touched.password && formik.errors.password ? (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.password}
+            </p>
+          ) : null}
+        </div>
+
+        <div>
+          <AuthInput
+            id="confirmPassword"
+            name="confirmPassword"
+            label="Confirm Password"
+            icon={Lock}
+            type="password"
+            isPassword={true}
+            showPassword={showConfirmPassword}
+            onTogglePassword={() =>
+              setShowConfirmPassword(!showConfirmPassword)
+            }
+            value={formik.values.confirmPassword}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="••••••••"
+            autoComplete="new-password"
+          />
+          {formik.touched.confirmPassword && formik.errors.confirmPassword ? (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.confirmPassword}
+            </p>
+          ) : null}
+        </div>
 
         <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
+          type="submit"
+          disabled={formik.isSubmitting}
           className="w-full py-3.5 rounded-xl font-semibold bg-[#5B687C] text-[#D4CDCB] hover:bg-[#6e7b8c] transition-colors disabled:opacity-60 cursor-pointer"
         >
-          {isSubmitting ? "Creating..." : "Create Account"}
+          {formik.isSubmitting ? "Creating..." : "Create Account"}
         </button>
-      </div>
+      </form>
 
       <SocialButtons />
 
       <p className="mt-8 text-center text-[#8D8F8E]">
         Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-[#ebf2f5] hover:underline">
+        <Link
+          to="/login"
+          className="font-semibold text-[#ebf2f5] hover:underline"
+        >
           Sign in
         </Link>
       </p>

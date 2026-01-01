@@ -3,6 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { ShieldCheck, ArrowRight } from "lucide-react";
 import api from "../../api/axiosInstance";
 import { getUser, logout } from "../../auth/storage";
+import { useAppFormik } from "../../Forms/useAppFormik";
+import {
+  therapistProfileSchema,
+  toTherapistProfilePayload,
+  mapTherapistProfileFieldErrors,
+} from "../../Forms/schemas";
 
 // Sub-components
 import ProfileHeader from "./ProfileHeader";
@@ -14,46 +20,43 @@ export default function TherapistProfile() {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const user = getUser(); 
-  const [formData, setFormData] = useState({
-    firstName: user?.first_name || '', 
-    lastName: user?.last_name || '',
-    email: user?.email || '', 
-    specialization: '',
-    licenseNumber: '',
-    clinicName: '',
-    city: '',
-    country: '',
-    yearsExperience: '', 
+
+  const user = getUser();
+
+  const { formik, apiError } = useAppFormik({
+    initialValues: {
+      firstName: user?.first_name || "",
+      lastName: user?.last_name || "",
+      email: user?.email || "",
+      specialization: "",
+      licenseNumber: "",
+      clinicName: "",
+      city: "",
+      country: "",
+      yearsExperience: "",
+    },
+    validationSchema: therapistProfileSchema,
+    mapFieldErrors: mapTherapistProfileFieldErrors,
+    onSubmit: async (values) => {
+      await api.patch("/therapist/profile/", toTherapistProfilePayload(values));
+      setIsEditing(false);
+    },
   });
 
-  const [errors, setErrors] = useState({});
-
-  const checkFormValidity = () => {
-    return (
-      formData.specialization?.trim() !== '' &&
-      formData.licenseNumber?.trim() !== '' &&
-      formData.clinicName?.trim() !== '' &&
-      formData.city?.trim() !== '' &&
-      formData.country?.trim() !== '' &&
-      String(formData.yearsExperience).trim() !== ''
-    );
-  };
-  const isFormValid = checkFormValidity();
+  const isFormValid = formik.isValid;
 
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        const { data } = await api.get('/therapist/profile/'); 
-        setFormData(prev => ({
+        const { data } = await api.get("/therapist/profile/");
+        formik.setValues((prev) => ({
           ...prev,
-          specialization: data.specialization || '',
-          licenseNumber: data.license_number || '',
-          clinicName: data.clinic_name || '',
-          city: data.city || '',
-          country: data.country || '',
-          yearsExperience: data.years_experience || ''
+          specialization: data.specialization || "",
+          licenseNumber: data.license_number || "",
+          clinicName: data.clinic_name || "",
+          city: data.city || "",
+          country: data.country || "",
+          yearsExperience: data.years_experience || "",
         }));
         if (!data.specialization) setIsEditing(true);
       } catch (error) {
@@ -64,48 +67,33 @@ export default function TherapistProfile() {
       }
     };
     fetchProfileData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
-  };
-
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete your profile? This cannot be undone.")) {
+    if (
+      window.confirm(
+        "Are you sure you want to delete your profile? This cannot be undone."
+      )
+    ) {
       try {
-        await api.delete('/therapist/profile/');
-        await logout(); 
+        await api.delete("/therapist/profile/");
+        await logout();
         navigate("/login");
-      } catch (error) { 
-        alert("Error deleting profile"); 
+      } catch (error) {
+        alert("Error deleting profile");
       }
     }
   };
 
   const handleEditToggle = async (e) => {
-    if(e) e.preventDefault();
+    if (e) e.preventDefault();
     if (isEditing) {
       if (!checkFormValidity()) {
         alert("Please fill in all fields before saving.");
         return;
       }
-      try {
-        const payload = {
-            specialization: formData.specialization,
-            license_number: formData.licenseNumber,
-            clinic_name: formData.clinicName,
-            city: formData.city,
-            country: formData.country,
-            years_experience: formData.yearsExperience,
-        };
-        await api.patch('/therapist/profile/', payload);
-        setIsEditing(false); 
-      } catch (error) {
-        console.error("Save error:", error);
-        alert("Failed to save profile.");
-      }
+      await formik.submitForm();
     } else {
       setIsEditing(true);
     }
@@ -114,66 +102,94 @@ export default function TherapistProfile() {
   // Helper for input styles inside components
   const getInputClass = (isError) => {
     const base = "w-full transition-all duration-200 rounded px-2 py-1 ";
-    if (!isEditing) return base + "bg-transparent border-transparent cursor-default pointer-events-none"; 
-    return base + `bg-white border ${isError ? 'border-red-400 bg-red-50' : 'border-gray-300 focus:border-blue-500 outline-none'}`;
+    if (!isEditing)
+      return (
+        base +
+        "bg-transparent border-transparent cursor-default pointer-events-none"
+      );
+    return (
+      base +
+      `bg-white border ${
+        isError
+          ? "border-red-400 bg-red-50"
+          : "border-gray-300 focus:border-blue-500 outline-none"
+      }`
+    );
   };
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Loading...</div>;
+  if (isLoading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading...
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 font-sans text-slate-800 pb-32">
-      <ProfileHeader 
-         user={formData} 
-         isEditing={isEditing} 
-         onLogout={async () => { await logout(); navigate("/login"); }} 
-         onToggleEdit={handleEditToggle} 
-         onDelete={handleDelete}
+      <ProfileHeader
+        user={formik.values}
+        isEditing={isEditing}
+        onLogout={async () => {
+          await logout();
+          navigate("/login");
+        }}
+        onToggleEdit={handleEditToggle}
+        onDelete={handleDelete}
       />
+
+      {apiError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl">
+          {apiError}
+        </div>
+      )}
 
       {isEditing && !isFormValid && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-2">
-            <ShieldCheck size={20} />
-            <span>Please fill in <strong>all fields</strong> to continue.</span>
+          <ShieldCheck size={20} />
+          <span>
+            Please fill in <strong>all fields</strong> to continue.
+          </span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-            <CredentialsCard 
-               data={formData} 
-               isEditing={isEditing} 
-               errors={errors} 
-               onChange={handleChange} 
-               getInputClass={getInputClass}
-            />
+          <CredentialsCard
+            data={formik.values}
+            isEditing={isEditing}
+            errors={formik.errors}
+            onChange={formik.handleChange}
+            getInputClass={getInputClass}
+          />
         </div>
 
         <div className="space-y-6">
-           <ExperienceCard 
-              years={formData.yearsExperience} 
-              isEditing={isEditing} 
-              onChange={handleChange} 
-           />
-           <LocationCard 
-              data={formData} 
-              isEditing={isEditing} 
-              errors={errors} 
-              onChange={handleChange} 
-              getInputClass={getInputClass}
-           />
+          <ExperienceCard
+            years={formik.values.yearsExperience}
+            isEditing={isEditing}
+            onChange={formik.handleChange}
+          />
+          <LocationCard
+            data={formik.values}
+            isEditing={isEditing}
+            errors={formik.errors}
+            onChange={formik.handleChange}
+            getInputClass={getInputClass}
+          />
         </div>
       </div>
 
-      <div className='flex items-center mt-6 w-fit'>
+      <div className="flex items-center mt-6 w-fit">
         <button
-          type="button" 
-          onClick={() => navigate('/dashboard')}
+          type="button"
+          onClick={() => navigate("/dashboard")}
           disabled={!isFormValid}
           className={`
             w-full flex justify-center items-center gap-2 px-6 py-4 rounded-2xl font-normal text-lg transition-all
-            ${isFormValid 
-              ? 'bg-[#3078E2] text-white hover:bg-blue-700 shadow-lg hover:shadow-xl hover:-translate-y-0.5 cursor-pointer' 
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-70'
+            ${
+              isFormValid
+                ? "bg-[#3078E2] text-white hover:bg-blue-700 shadow-lg hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-70"
             }
           `}
         >

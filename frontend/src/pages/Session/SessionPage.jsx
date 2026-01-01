@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
+import {sessionAudioUploadSchema,toSessionAudioFormData,mapSessionAudioUploadErrors,} from "../../Forms/schemas";
+import { parseServerErrors } from "../../Forms/serverErrors";
+
 
 // Sub-components
 import PatientSelector from "./PatientSelector";
@@ -39,23 +42,36 @@ export default function SessionPage() {
   }, []);
 
   // --- Logic ---
-  const handleUploadFile = async (patientId, file) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("patient", patientId);
-      formData.append("audio_file", file);
-      // If you need session date/name, append here too
-
-      const { data } = await api.post("/sessions/", formData);
-      // Navigate to the new session's details page
-      navigate(`/sessions/${data.id}`);
-    } catch (err) {
-      console.error(err);
-      setUploadError(err?.response?.data?.detail || "Failed to upload session.");
-      setIsUploading(false);
-    }
-  };
+const handleUploadFile = async (patientId, file) => {
+  
+  setUploadError("");
+  setIsUploading(true);
+  try {
+    await sessionAudioUploadSchema.validate(
+      { patientId: Number(patientId), file },
+      { abortEarly: true }
+    );
+  } catch (validationErr) {
+    setIsUploading(false);
+    setUploadError(validationErr.message || "Invalid input.");
+    return;
+  }
+  const formData = toSessionAudioFormData({
+    patientId: Number(patientId),
+    file,
+  });
+  try {
+    const { data } = await api.post("/sessions/", formData);
+    navigate(`/sessions/${data.id}`);
+  } catch (err) {
+    const { fieldErrors, nonFieldError } = parseServerErrors(err);
+    const mapped = mapSessionAudioUploadErrors(fieldErrors);
+    const msg =
+      mapped.patientId || mapped.file || nonFieldError || "Failed to upload session.";
+    setUploadError(msg);
+    setIsUploading(false);
+  }
+};
 
   const startRecording = async () => {
     if (!selectedPatientId) return;
