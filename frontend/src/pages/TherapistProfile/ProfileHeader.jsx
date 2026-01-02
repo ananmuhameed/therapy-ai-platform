@@ -1,4 +1,4 @@
-import React from "react";
+import { toast } from "react-toastify";
 import { FaUserCircle } from "react-icons/fa";
 import { Mail, Calendar, LogOut, Save, Edit2, Trash2 } from "lucide-react";
 
