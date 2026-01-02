@@ -13,6 +13,9 @@ import TherapistProfile from "./pages/TherapistProfile/TherapistProfile";
 import SessionDetail from "./pages/SessionDetails/SessionDetails";
 import SessionsListPage from "./pages/SessionsList/SessionsListPage";
 import ReportsPage from "./pages/Report/ReportsPage";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 
 function App() {
   const navigate = useNavigate();
@@ -22,6 +25,7 @@ function App() {
   }, [navigate]);
 
   return (
+    <>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/signup" element={<Signup />} />
@@ -38,6 +42,16 @@ function App() {
 
         </Route>
       </Routes>
+      <ToastContainer
+  position="top-right"
+  autoClose={3000}
+  hideProgressBar={false}
+  closeOnClick
+  pauseOnHover
+  draggable
+  style={{ zIndex: 999999 }}
+/>
+      </>
   );
 }
 

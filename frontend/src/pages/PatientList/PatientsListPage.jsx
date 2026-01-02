@@ -5,6 +5,7 @@ import api from "../../api/axiosInstance";
 // Components
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
+import AddPatientForm from "../../components/AddPatientForm/AddPatientForm"; // 1. Import Form
 
 export default function PatientsListPage() {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ export default function PatientsListPage() {
 
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
+
+  // 2. Add Modal State
+  const [showModal, setShowModal] = useState(false);
 
   // --- Logic ---
   const fetchPatients = async () => {
@@ -68,15 +72,20 @@ export default function PatientsListPage() {
     navigate(`/patients/${p.id}`);
   };
 
+  // 3. Update Handler to show modal
   const handleAddPatient = () => {
-    // Navigate with query param to trigger modal in MainLayout or local modal logic
-    navigate("/patients?add=1");
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+      setShowModal(false);
+      fetchPatients(); // Refresh list to show the new patient
   };
 
   return (
-    <div className="w-full p-6 sm:p-8">
+    <div className="w-full p-6 sm:p-8 relative">
       
-      {/* 1. Controls Section */}
+      {/* Controls Section */}
       <PatientsControls 
         totalLabel={totalLabel}
         search={search}
@@ -87,7 +96,7 @@ export default function PatientsListPage() {
         onAddPatient={handleAddPatient}
       />
 
-      {/* 2. Table Section */}
+      {/* Table Section */}
       <PatientsTable 
         loading={loading}
         error={error}
@@ -99,6 +108,16 @@ export default function PatientsListPage() {
         }}
         onAddPatient={handleAddPatient}
       />
+
+      {/* 4. Modal Overlay */}
+      {showModal && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="absolute inset-0" onClick={() => setShowModal(false)}></div>
+          <div className="relative z-10 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+             <AddPatientForm onClose={handleCloseModal} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
