@@ -1,0 +1,9 @@
+faster-whisper
+
+django
+djangorestframework
+psycopg2-binary
+django-cors-headers
+djangorestframework-simplejwt
+celery>=5.3
+redis>=5.0
