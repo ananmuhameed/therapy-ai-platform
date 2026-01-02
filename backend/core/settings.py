@@ -19,9 +19,34 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+USE_S3 = os.getenv("USE_S3", "0") == "1"
+if not USE_S3:
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
+else:
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "eu-central-1")
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+    # Generates Signed URLs. Instead of a public link, Django creates a temporary link that expires, ensuring private media remains secure.
+    AWS_QUERYSTRING_AUTH = True
+
+    STORAGES = {
+        "default": {
+            # Tells Django to use the S3Storage class from the django-storages package instead of the default local disk storage.
+            "BACKEND": "storages.backends.s3.S3Storage",
+            # Passes the bucket and region details directly into that storage engine.
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "region_name": AWS_S3_REGION_NAME,
+            },
+        },
+    }
+
+    # Optional - only needed if you rely on MEDIA_URL somewhere
+    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
