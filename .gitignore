@@ -27,4 +27,4 @@ db.sqlite3
 # Celery beat schedule file
 celerybeat-schedule
 backend/celerybeat-schedule
-backend/recordings/
+backend/media/recordings/

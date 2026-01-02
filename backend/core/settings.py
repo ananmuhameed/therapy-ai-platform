@@ -43,6 +43,9 @@ else:
                 "region_name": AWS_S3_REGION_NAME,
             },
         },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
     }
 
     # Optional - only needed if you rely on MEDIA_URL somewhere

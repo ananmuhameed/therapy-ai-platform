@@ -15,8 +15,8 @@ from therapy_sessions.serializers.audio import SessionAudioUploadSerializer
 from users.permissions import IsTherapistProfileCompleted
 
 from therapy_sessions.serializers.audio_multipart import ( MultipartPresignSerializer, MultipartCompleteSerializer)
-from services.s3.s3_client import s3_client, s3_bucket
-from services.s3.storage_key import session_audio_key 
+from therapy_sessions.services.s3.s3_client import s3_client, s3_bucket
+from therapy_sessions.services.s3.storage_key import session_audio_key 
 
 MULTIPART_PART_SIZE = 10 * 1024 * 1024  # 10 MB
 class TherapySessionViewSet(viewsets.ModelViewSet):
