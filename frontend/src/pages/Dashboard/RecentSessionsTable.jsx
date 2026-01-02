@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { FiEye } from "react-icons/fi";
 import Skeleton from "../../components/ui/Skeleton";
 import StatusPill from "../../components/ui/StatusPill";
+import { formatDate } from "../../utils/helpers";
 
 export default function RecentSessionsTable({
   sessions = [],
@@ -36,6 +37,7 @@ export default function RecentSessionsTable({
         </button>
       </div>
 
+      {/* Table Header */}
       <div className="grid grid-cols-12 text-xs font-medium text-gray-500 px-2 pb-2">
         <div className="col-span-1">#</div>
         <div className="col-span-5">Patient</div>
@@ -45,6 +47,7 @@ export default function RecentSessionsTable({
       </div>
 
       <div className="divide-y divide-gray-100 rounded-xl border border-gray-100 overflow-hidden">
+        {/* Loading */}
         {loading && (
           <div className="p-4 space-y-3 bg-white">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -53,18 +56,21 @@ export default function RecentSessionsTable({
           </div>
         )}
 
+        {/* Error */}
         {!loading && error && (
           <div className="p-5 bg-white">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
+        {/* Empty */}
         {!loading && !error && recent3.length === 0 && (
           <div className="p-8 bg-white text-center">
             <p className="text-sm text-gray-600">No sessions yet.</p>
           </div>
         )}
 
+        {/* Rows */}
         {!loading &&
           !error &&
           recent3.map((row, idx) => (
@@ -72,6 +78,12 @@ export default function RecentSessionsTable({
               key={row.id}
               onClick={() => onRowClick(row.id)}
               className="grid grid-cols-12 items-center px-2 py-3 bg-white hover:bg-gray-50 transition cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onRowClick(row.id);
+              }}
+              title="Open session"
             >
               <div className="col-span-1 text-sm text-gray-700">
                 {row.indexLabel ?? idx + 1}
@@ -79,7 +91,9 @@ export default function RecentSessionsTable({
 
               <div className="col-span-5 min-w-0">
                 <div className="text-sm text-gray-800 font-medium truncate">
-                  {row.name || row.patient_name || `Patient #${row.patient}`}
+                  {row.name ||
+                    row.patient_name ||
+                    (row.patient ? `Patient #${row.patient}` : "—")}
                 </div>
               </div>
 
@@ -87,11 +101,15 @@ export default function RecentSessionsTable({
                 <StatusPill status={row.status} />
               </div>
 
-              {/* ✅ CREATED AT ONLY */}
+              {/* ✅ CREATED AT (matches SessionsListPage) */}
               <div className="col-span-2 text-sm text-gray-700">
                 {row.created_at
-                  ? new Date(row.created_at).toLocaleDateString()
-                  : "-"}
+                  ? formatDate(row.created_at, {
+                      year: "numeric",
+                      month: "short",
+                      day: "2-digit",
+                    })
+                  : "—"}
               </div>
 
               <div className="col-span-1 flex justify-end">
