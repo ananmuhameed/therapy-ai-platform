@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
+from core.models import TimeStampedModel
 
 
 
-class Patient(models.Model):
+class Patient(TimeStampedModel):
     therapist = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -20,8 +21,8 @@ class Patient(models.Model):
 
     notes = models.TextField(blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at = models.DateTimeField(auto_now_add=True)
+    # updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "patient"

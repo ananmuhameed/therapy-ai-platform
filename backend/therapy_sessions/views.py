@@ -10,11 +10,19 @@ from therapy_sessions.tasks import transcribe_session
 
 from therapy_sessions.serializers.session import TherapySessionSerializer, SessionDetailSerializer
 from therapy_sessions.serializers.audio import SessionAudioUploadSerializer
+from users.permissions import IsTherapistProfileCompleted
 
 class TherapySessionViewSet(viewsets.ModelViewSet):
     serializer_class = TherapySessionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        """
+        Session creation is allowed for authenticated therapists.
+        Profile completion is enforced at the UI level, not API level.
+        """
+        return [permissions.IsAuthenticated()]
+    
     def get_serializer_class(self):
         if self.action == "retrieve":
             return SessionDetailSerializer
