@@ -2,13 +2,15 @@ import os
 from .base import BaseTranscriptionService
 
 def get_transcription_service() -> BaseTranscriptionService:
-    provider = os.getenv("TRANSCRIPTION_PROVIDER", "whisper").lower()
+    """
+    Returns the configured transcription service.
+    TRANSCRIPTION_PROVIDER: whisper | mock
+    """
+    provider = (os.getenv("TRANSCRIPTION_PROVIDER") or "mock").strip().lower()
 
     if provider == "whisper":
         from .whisper import WhisperTranscriptionService
-        return WhisperTranscriptionService(
-            model_size=os.getenv("WHISPER_MODEL_SIZE", "medium")
-        )
+        return WhisperTranscriptionService()
 
     from .mock import MockTranscriptionService
     return MockTranscriptionService()
