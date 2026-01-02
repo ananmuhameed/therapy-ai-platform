@@ -1,13 +1,13 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import Signup from "../../pages/Signup";
+import Signup from "../../pages/Signup/Signup";
 import api from "../../api/axiosInstance";
-import { BrowserRouter } from "react-router-dom";
+import { HashRouter } from "react-router-dom";
 import { vi } from "vitest";
 
 
 vi.mock("../../api/axiosInstance");
 
-const renderWithRouter = (ui) => render(<BrowserRouter>{ui}</BrowserRouter>);
+const renderWithRouter = (ui) => render(<HashRouter>{ui}</HashRouter>);
 
 describe("Signup Form Validation", () => {
   beforeEach(() => {

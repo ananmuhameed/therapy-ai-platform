@@ -8,6 +8,7 @@ import { formatDate } from "../../utils/helpers";
 import StatBox from "./StatBox";
 import RecentSessionsTable from "./RecentSessionsTable";
 import GradientButton from "../../components/ui/GradientButton";
+import AddPatientForm from "../../components/AddPatientForm/AddPatientForm"; // 1. Import the form
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -18,22 +19,34 @@ export default function Dashboard() {
   const [sessionsError, setSessionsError] = useState("");
   const [patients, setPatients] = useState([]);
 
-  useEffect(() => {
-    if (!getAccessToken()) { navigate("/login", { replace: true }); return; }
-    const cached = getUser();
-    if (cached) setUser(cached);
+  // 2. Add state for the modal
+  const [showAddPatient, setShowAddPatient] = useState(false);
 
-    api.get("/auth/me/").then(({ data }) => { setUser(data); localStorage.setItem("user", JSON.stringify(data)); }).catch(() => { clearAuth(); navigate("/login"); });
-    api.get("/dashboard/").then(({ data }) => setStats(data)).catch(console.error);
-
-    setSessionsLoading(true);
-    Promise.all([api.get("/sessions/"), api.get("/patients/")])
+  // Helper to fetch data (so we can reuse it)
+  const fetchDashboardData = () => {
+     api.get("/dashboard/").then(({ data }) => setStats(data)).catch(console.error);
+     
+     setSessionsLoading(true);
+     Promise.all([api.get("/sessions/"), api.get("/patients/")])
       .then(([sRes, pRes]) => {
         setSessions(Array.isArray(sRes.data) ? sRes.data : sRes.data?.results || []);
         setPatients(Array.isArray(pRes.data) ? pRes.data : pRes.data?.results || []);
       })
       .catch(() => setSessionsError("Failed to load sessions"))
       .finally(() => setSessionsLoading(false));
+  };
+
+  useEffect(() => {
+    if (!getAccessToken()) { navigate("/login", { replace: true }); return; }
+    const cached = getUser();
+    if (cached) setUser(cached);
+
+    api.get("/auth/me/").then(({ data }) => { 
+        setUser(data); 
+        localStorage.setItem("user", JSON.stringify(data)); 
+    }).catch(() => { clearAuth(); navigate("/login"); });
+
+    fetchDashboardData();
   }, [navigate]);
 
   const recentSessionsFormatted = useMemo(() => {
@@ -52,10 +65,15 @@ export default function Dashboard() {
       }));
   }, [sessions, patients]);
 
+  const handlePatientAdded = () => {
+    setShowAddPatient(false);
+    fetchDashboardData(); // Refresh stats to show new patient count
+  };
+
   if (!user) return <div className="p-8"><h2>Loading...</h2></div>;
 
   return (
-    <div className="p-10 space-y-8">
+    <div className="p-10 space-y-8 relative">
       <h1 style={{ fontSize: 32, color: "#727473" }} className="font-semibold">Therapist Dashboard</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -65,7 +83,11 @@ export default function Dashboard() {
       </div>
 
       <div className="flex gap-4 items-center">
-        <GradientButton onClick={() => navigate("/patients?add=1")}><FiPlus size={18} /> Add Patient</GradientButton>
+        {/* 3. Update onClick to open Modal instead of navigating */}
+        <GradientButton onClick={() => setShowAddPatient(true)}>
+            <FiPlus size={18} /> Add Patient
+        </GradientButton>
+        
         <Link to="/sessions/new" className="no-underline">
           <GradientButton><FiMic size={18} /> New Session</GradientButton>
         </Link>
@@ -78,6 +100,18 @@ export default function Dashboard() {
         onViewAll={() => navigate("/sessions")}
         onRowClick={(id) => navigate(`/sessions/${id}`)}
       />
+
+      {/* 4. Render the Modal Overlay */}
+      {showAddPatient && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          {/* Close on click outside */}
+          <div className="absolute inset-0" onClick={() => setShowAddPatient(false)}></div>
+          
+          <div className="relative z-10 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+             <AddPatientForm onClose={handlePatientAdded} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

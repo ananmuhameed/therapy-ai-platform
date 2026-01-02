@@ -109,3 +109,11 @@ class TherapistProfileView(APIView):
             TherapistProfileSerializer(profile).data,
             status=status.HTTP_200_OK,
         )
+    
+    def delete(self, request):
+        """
+        Deletes the authenticated user and their profile.
+        """
+        user = request.user
+        user.delete() # This deletes the User record and cascades to the Profile
+        return Response(status=status.HTTP_204_NO_CONTENT)
