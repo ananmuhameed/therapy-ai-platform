@@ -49,10 +49,13 @@ services:
   celery_worker:
     env_file:
       - .env
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
     command: celery -A core worker -l info
     volumes:
       - ./backend:/app
+      - hf_cache:/root/.cache/huggingface
     environment:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
@@ -61,6 +64,8 @@ services:
       DB_PORT: ${POSTGRES_PORT}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER}
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE}
     depends_on:
       - db
       - redis
@@ -99,3 +104,4 @@ volumes:
   postgres_data:
   redis_data:
   frontend_node_modules:
+  hf_cache:
