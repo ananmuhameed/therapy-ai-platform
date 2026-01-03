@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
 
 // Sub-components
@@ -8,16 +7,18 @@ import SessionActionButtons from "./SessionActionButtons";
 import RecordingInterface from "./RecordingInterface";
 
 export default function SessionPage() {
-  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const streamRef = useRef(null);
 
   // --- State ---
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [uploadError, setUploadError] = useState("");
-  
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const [lastSessionId, setLastSessionId] = useState(null);
+
   // Recording State
   const [isRecorderVisible, setIsRecorderVisible] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -26,7 +27,6 @@ export default function SessionPage() {
 
   // --- Effects ---
   useEffect(() => {
-    // Fetch patients on mount
     const fetchPatients = async () => {
       try {
         const { data } = await api.get("/patients/");
@@ -38,33 +38,89 @@ export default function SessionPage() {
     fetchPatients();
   }, []);
 
-  // --- Logic ---
-  const handleUploadFile = async (patientId, file) => {
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("patient", patientId);
-      formData.append("audio_file", file);
-      // If you need session date/name, append here too
+  // cleanup mic on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+        }
+      } catch {}
+    };
+  }, []);
 
-      const { data } = await api.post("/sessions/", formData);
-      // Navigate to the new session's details page
-      navigate(`/sessions/${data.id}`);
+  // --- Logic ---
+  // ✅ Correct flow:
+  // 1) Create session (JSON)
+  // 2) Upload audio to /sessions/:id/upload-audio/ (multipart)
+  // ✅ No navigation
+  const handleUploadFile = async (patientId, file) => {
+    if (!patientId || !file) return;
+
+    setIsUploading(true);
+    setUploadError("");
+    setUploadSuccess("");
+    setLastSessionId(null);
+
+    try {
+      // 1) Create session (backend ModelViewSet expects JSON, not multipart)
+      const createRes = await api.post("/sessions/", {
+        patient: patientId,
+        // If your backend requires session_date/duration, add them here.
+        // session_date: new Date().toISOString(),
+      });
+
+      const newSessionId = createRes?.data?.id;
+      if (!newSessionId) throw new Error("Session created but no id returned.");
+
+      // 2) Upload audio to the correct endpoint (this is what your backend supports)
+      const formData = new FormData();
+      formData.append("audio_file", file);
+
+      await api.post(`/sessions/${newSessionId}/upload-audio/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      // 3) Quick verify (prevents fake “success”)
+      const verify = await api.get(`/sessions/${newSessionId}/`);
+      if (!verify?.data?.audio_url) {
+        throw new Error("Upload succeeded but audio_url is empty. Check backend storage/media settings.");
+      }
+
+      setLastSessionId(newSessionId);
+      setUploadSuccess("Audio saved successfully.");
     } catch (err) {
       console.error(err);
-      setUploadError(err?.response?.data?.detail || "Failed to upload session.");
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.audio_file?.[0] ||
+        err?.response?.data?.patient?.[0] ||
+        err?.message ||
+        "Failed to upload.";
+      setUploadError(msg);
+    } finally {
       setIsUploading(false);
     }
   };
 
   const startRecording = async () => {
-    if (!selectedPatientId) return;
+    if (!selectedPatientId) {
+      setUploadError("Select a patient first.");
+      return;
+    }
+    if (isUploading || isRecording) return;
+
     setUploadError("");
+    setUploadSuccess("");
+    setLastSessionId(null);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      
+      streamRef.current = stream;
+
+      // ✅ don't force mimeType (Safari breaks)
+      const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -72,24 +128,46 @@ export default function SessionPage() {
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      recorder.onstop = async () => {
-        // cleanup
-        stream.getTracks().forEach((t) => t.stop());
+      recorder.onerror = () => {
+        setUploadError("Recording failed. Please try again.");
+        setIsRecording(false);
+        setIsPaused(false);
+        setIsRecorderVisible(false);
+      };
 
-        // create file
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], `recording_${Date.now()}.webm`, { type: "audio/webm" });
+      recorder.onstop = async () => {
+        // cleanup stream
+        try {
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach((t) => t.stop());
+            streamRef.current = null;
+          }
+        } catch {}
+
+        const mime = recorder.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: mime });
+
+        // guard: empty recording
+        if (!blob || blob.size === 0) {
+          setUploadError("Recording was empty. Try again.");
+          setIsRecording(false);
+          setIsPaused(false);
+          setIsRecorderVisible(false);
+          return;
+        }
+
+        const ext = mime.includes("webm") ? "webm" : mime.includes("ogg") ? "ogg" : "wav";
+        const file = new File([blob], `recording_${Date.now()}.${ext}`, { type: mime });
 
         // reset UI
         setIsRecording(false);
         setIsPaused(false);
         setIsRecorderVisible(false);
 
-        // trigger upload
+        // ✅ save only (no navigation)
         await handleUploadFile(selectedPatientId, file);
       };
 
-      // start
       setIsRecorderVisible(true);
       setIsRecording(true);
       setIsPaused(false);
@@ -102,36 +180,65 @@ export default function SessionPage() {
 
   const stopRecording = () => {
     const r = mediaRecorderRef.current;
-    if (r && r.state !== "inactive") r.stop();
+    if (!r || r.state === "inactive") return;
+    try {
+      r.stop(); // triggers onstop → upload
+    } catch {}
   };
 
   const pauseRecording = () => {
     const r = mediaRecorderRef.current;
     if (r && r.state === "recording") {
-      r.pause();
-      setIsPaused(true);
+      try {
+        r.pause();
+        setIsPaused(true);
+      } catch {}
     }
   };
 
   const resumeRecording = () => {
     const r = mediaRecorderRef.current;
     if (r && r.state === "paused") {
-      r.resume();
-      setIsPaused(false);
+      try {
+        r.resume();
+        setIsPaused(false);
+      } catch {}
     }
   };
 
   const onAudioSelected = (e) => {
     const file = e.target.files?.[0];
-    if (file && selectedPatientId) {
-      handleUploadFile(selectedPatientId, file);
-    }
     e.target.value = ""; // reset input
+
+    if (!selectedPatientId) {
+      setUploadError("Select a patient first.");
+      return;
+    }
+    if (!file) return;
+
+    setUploadError("");
+    setUploadSuccess("");
+    setLastSessionId(null);
+
+    handleUploadFile(selectedPatientId, file);
+  };
+
+  const openFilePicker = () => {
+    if (!selectedPatientId) {
+      setUploadError("Select a patient first.");
+      return;
+    }
+    setUploadError("");
+    setUploadSuccess("");
+    setLastSessionId(null);
+
+    if (!fileInputRef.current) return;
+    fileInputRef.current.value = ""; // allow same file selection again
+    fileInputRef.current.click();
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
-      
       <main className="w-full max-w-[760px] flex flex-col items-center gap-6">
         {/* Title */}
         <h1 className="text-[40px] font-bold text-center mb-7 tracking-wide">
@@ -141,33 +248,50 @@ export default function SessionPage() {
         </h1>
 
         {/* 1. Patient Selector */}
-        <PatientSelector 
-          patients={patients} 
-          selectedId={selectedPatientId} 
-          onChange={setSelectedPatientId} 
+        <PatientSelector
+          patients={patients}
+          selectedId={selectedPatientId}
+          onChange={setSelectedPatientId}
         />
 
         {/* 2. Action Buttons */}
-        <SessionActionButtons 
+        <SessionActionButtons
           onStart={startRecording}
-          onUpload={() => fileInputRef.current?.click()}
+          onUpload={openFilePicker}
           canProceed={!!selectedPatientId}
           isUploading={isUploading}
+          isRecording={isRecording || isPaused}
         />
 
-        {/* Error Message */}
-        {uploadError && (
-          <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>
+        {/* Messages */}
+        {uploadError && <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>}
+
+        {uploadSuccess && (
+          <div className="mt-2 flex flex-col items-center gap-1">
+            <p className="text-green-600 font-medium text-sm">{uploadSuccess}</p>
+
+            {/* Optional: user-initiated navigation (NOT automatic) */}
+            {lastSessionId && (
+              <button
+                type="button"
+                onClick={() => (window.location.href = `/sessions/${lastSessionId}`)}
+                className="text-xs font-medium text-[#3078E2] hover:underline"
+              >
+                Open saved session
+              </button>
+            )}
+          </div>
         )}
 
         {/* 3. Recorder UI */}
         {isRecorderVisible && (
-          <RecordingInterface 
-             isRecording={isRecording}
-             isPaused={isPaused}
-             onStop={stopRecording}
-             onPause={pauseRecording}
-             onResume={resumeRecording}
+          <RecordingInterface
+            isRecording={isRecording}
+            isPaused={isPaused}
+            onStop={stopRecording}
+            onPause={pauseRecording}
+            onResume={resumeRecording}
+            isUploading={isUploading}
           />
         )}
       </main>
