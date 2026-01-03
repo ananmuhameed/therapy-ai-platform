@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User } from "lucide-react";
 import api from "../../api/axiosInstance";
+import { GoogleLogin, googleLogout } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { FaGoogle } from "react-icons/fa";
 
 // Components
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
@@ -12,6 +16,7 @@ const isStrongPassword = (password) => {
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
   return regex.test(password);
 };
+
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -29,6 +34,35 @@ export default function Signup() {
     password: "",
     confirmPassword: "",
   });
+
+  const googleLogin = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
+    try {
+      const userInfo = await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+          },
+        }
+      );
+
+      console.log("Google User:", userInfo.data);
+
+      // TODO: send userInfo.data to your backend
+      // await api.post("/auth/google/", userInfo.data);
+
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      console.error("Google login failed", err);
+      setError("Google login failed. Please try again.");
+    }
+  },
+  onError: () => {
+    setError("Google login failed.");
+  },
+});
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -175,9 +209,23 @@ export default function Signup() {
           {isSubmitting ? "Creating..." : "Create Account"}
         </button>
       </div>
+ 
 
-      <SocialButtons />
+ <div className="flex items-center my-8">
+        <div className="flex-grow border-t border-[#5B687C]"></div>
+        <span className="mx-4 text-[#8D8F8E] text-sm">Or continue with</span>
+        <div className="flex-grow border-t border-[#5B687C]"></div>
+      </div>
+ <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
+     <button
+  onClick={() => googleLogin()}
+  className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+>
+  <FaGoogle />
+  Continue with Google
+</button>
 
+</div>
       <p className="mt-8 text-center text-[#8D8F8E]">
         Already have an account?{" "}
         <Link to="/login" className="font-semibold text-[#ebf2f5] hover:underline">

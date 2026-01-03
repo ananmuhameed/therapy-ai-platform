@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
 import api from "../../api/axiosInstance";
 import { setAuth } from "../../auth/storage";
+import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { FaGoogle } from "react-icons/fa";
+
 
 // Components
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
@@ -17,6 +21,35 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
 
+const googleLogin = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
+    try {
+      const { data: googleUser } = await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${tokenResponse.access_token}`,
+          },
+        }
+      );
+
+     console.log("Google token:", tokenResponse);
+console.log("Google user:", googleUser);
+
+// TEMP: frontend-only success
+navigate("/dashboard");
+
+
+      setAuth({ accessToken: data.access, user: data.user });
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      setError("Google login failed.");
+    }
+  },
+  onError: () => setError("Google login failed."),
+});
+
+  
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -132,17 +165,20 @@ export default function Login() {
         <span className="mx-4 text-[#8D8F8E] text-sm">Or continue with</span>
         <div className="flex-grow border-t border-[#5B687C]"></div>
       </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {["Google", "Cloud", "Email"].map((provider) => (
-          <button
-            key={provider}
-            type="button"
-            className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb] hover:bg-white/5 transition-colors"
-          >
-            {provider}
-          </button>
-        ))}
+
+      <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
+
+        <button
+          type="button"
+          onClick={() => googleLogin()}
+
+          className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+        >
+         <FaGoogle />
+ Continue with Google
+        </button>
+
+
       </div>
 
       {/* Switch to Signup */}
