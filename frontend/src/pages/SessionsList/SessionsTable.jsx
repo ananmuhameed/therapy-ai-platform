@@ -2,10 +2,11 @@ import React from "react";
 import { FiEye } from "react-icons/fi";
 import { classNames } from "../../utils/helpers";
 import StatusPill from "../../components/ui/StatusPill";
+
 import TableCard from "../../components/ui/TableCard";
 import ClickableRow from "../../components/ui/ClickableRow";
 
-export default function ReportsTable({ loading, error, reports, onOpen }) {
+export default function SessionsTable({ loading, error, sessions, onOpen }) {
   return (
     <TableCard
       columns={[
@@ -17,45 +18,42 @@ export default function ReportsTable({ loading, error, reports, onOpen }) {
       ]}
       loading={loading}
       error={error}
-      rowsCount={reports.length}
-      emptyTitle="No reports found."
-      emptySubtitle="Try changing filters or search."
+      rowsCount={sessions.length}
+      emptyTitle="No sessions found."
+      emptySubtitle="Try changing search."
       skeletonRows={7}
     >
-      {reports.map((r) => {
-        const canOpen = Boolean(r.openPath);
-        const key = `${r.sessionId ?? ""}-${r.id}`;
-
+      {sessions.map((s) => {
+        const canOpen = Boolean(s.openPath);
         return (
           <ClickableRow
-            key={key}
+            key={s.id}
             canOpen={canOpen}
-            onOpen={() => onOpen(r.openPath)}
+            onOpen={() => onOpen(s.openPath)}
             title={canOpen ? "Open session" : "No session to open"}
           >
-            <div className="col-span-1 text-sm text-gray-700">{r.indexLabel}</div>
+            <div className="col-span-1 text-sm text-gray-700">{s.indexLabel}</div>
 
             <div className="col-span-5 min-w-0">
               <div className="text-sm text-gray-900 font-medium truncate">
-                {r.patientName}
+                {s.patientName}
               </div>
               <div className="mt-0.5 text-xs text-gray-500 font-normal">
-                Session ID:{" "}
-                <span className="font-mono">{r.sessionId ?? "—"}</span>
+                Session ID: <span className="font-mono">{s.id}</span>
               </div>
             </div>
 
-            <div className="col-span-3 text-sm text-gray-700">{r.date}</div>
+            <div className="col-span-3 text-sm text-gray-700">{s.date}</div>
 
             <div className="col-span-2">
-              <StatusPill status={r.status} />
+              <StatusPill status={s.status} />
             </div>
 
             <div className="col-span-1 flex justify-end">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (canOpen) onOpen(r.openPath);
+                  if (canOpen) onOpen(s.openPath);
                 }}
                 disabled={!canOpen}
                 className={classNames(
