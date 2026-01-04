@@ -2,15 +2,14 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User } from "lucide-react";
 import api from "../../api/axiosInstance";
-import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { useGoogleLogin } from "@react-oauth/google";
-import axios from "axios";
 import { FaGoogle } from "react-icons/fa";
+import { setAuth } from "../../auth/storage";
+
 
 // Components
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
 import AuthInput from "../../components/ui/AuthInput"; // Reusing the one created earlier
-import SocialButtons from "./SocialButtons";
 
 const isStrongPassword = (password) => {
   const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -38,23 +37,18 @@ export default function Signup() {
   const googleLogin = useGoogleLogin({
   onSuccess: async (tokenResponse) => {
     try {
-      const userInfo = await axios.get(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
-        }
-      );
+      const { data } = await api.post("/auth/google/login/", {
+        access_token: tokenResponse.access_token,
+      });
 
-      console.log("Google User:", userInfo.data);
-
-      // TODO: send userInfo.data to your backend
-      // await api.post("/auth/google/", userInfo.data);
+      setAuth({
+        accessToken: data.access,
+        user: data.user,
+      });
 
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      console.error("Google login failed", err);
+      console.error(err);
       setError("Google login failed. Please try again.");
     }
   },

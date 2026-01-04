@@ -24,25 +24,21 @@ export default function Login() {
 const googleLogin = useGoogleLogin({
   onSuccess: async (tokenResponse) => {
     try {
-      const { data: googleUser } = await axios.get(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
-          },
-        }
-      );
+      // Send token directly to backend
+      const { data } = await api.post("/auth/google/login/", {
+        access_token: tokenResponse.access_token,
+      });
 
-     console.log("Google token:", tokenResponse);
-console.log("Google user:", googleUser);
+      // Store JWT + user
+      setAuth({
+        accessToken: data.access,
+        user: data.user,
+      });
 
-// TEMP: frontend-only success
-navigate("/dashboard");
-
-
-      setAuth({ accessToken: data.access, user: data.user });
       navigate("/dashboard", { replace: true });
+
     } catch (err) {
+      console.error(err);
       setError("Google login failed.");
     }
   },
