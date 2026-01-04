@@ -7,3 +7,5 @@ celery>=5.3
 redis>=5.0
 python-dotenv>=1.0
 requests
+pytest
+pytest-django

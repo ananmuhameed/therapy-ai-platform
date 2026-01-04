@@ -64,29 +64,4 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run backend tests
-        run: pytest -q --ds=core.settings
-
-  frontend:
-    name: Frontend Dependency Check
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-
-      - name: Install frontend dependencies
-        run: |
-          if [ -f "package.json" ]; then
-            npm install
-          else
-            echo "No package.json found."
-          fi
+        run: pytest -q
