@@ -252,8 +252,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             )
 
             upload.status = "completed"
-            upload.completed_at = timezone.now()
-            upload.save(update_fields=["status", "completed_at"])
+            upload.save(update_fields=["status"])
 
             locked.status = "transcribing"
             locked.last_error_stage = ""
