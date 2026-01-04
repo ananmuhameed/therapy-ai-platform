@@ -3,18 +3,29 @@ from therapy_sessions.models import SessionAudio
 
 
 class SessionAudioSerializer(serializers.ModelSerializer):
+    audio_url = serializers.SerializerMethodField()
+
     class Meta:
         model = SessionAudio
         fields = [
             "id",
-            "audio_file",
+            "audio_url",
             "original_filename",
             "duration_seconds",
             "sample_rate",
             "language_code",
-            "uploaded_at",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = fields
+
+    def get_audio_url(self, obj):
+        request = self.context.get("request")
+        if obj.audio_file:
+            # absolute URL if request exists, else relative
+            url = obj.audio_file.url
+            return request.build_absolute_uri(url) if request else url
+        return None
 
 
 class SessionAudioUploadSerializer(serializers.Serializer):

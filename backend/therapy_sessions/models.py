@@ -44,7 +44,7 @@ class TherapySession(TimeStampedModel):
 
     class Meta:
         db_table = "therapy_session"
-        ordering = ["-session_date"]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"Session #{self.id} | Patient {self.patient_id} | {self.session_date}"
@@ -66,6 +66,7 @@ class SessionAudio(TimeStampedModel):
 
     def __str__(self):
         return f"Audio for Session #{self.session_id}"    
+    
 class SessionTranscript(TimeStampedModel):
     STATUS_CHOICES = [
         ("pending", "Pending"),
