@@ -69,14 +69,19 @@ export default function TherapistProfile() {
           yearsExperience: data.years_experience || "",
         }));
 
-        if (!data.specialization) setIsEditing(true);
-      } catch (error) {
-        console.error("Error loading profile:", error);
+       if (data.is_completed === true) {
+        setIsEditing(false);
+      } else {
         setIsEditing(true);
-      } finally {
-        setIsLoading(false);
       }
-    };
+
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      setIsEditing(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
     fetchProfileData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,8 +133,8 @@ export default function TherapistProfile() {
       reverseButtons: true,
       customClass: {
         popup: "rounded-2xl",
-        confirmButton: "rounded-xl",
-        cancelButton: "rounded-xl",
+        confirmButton: "rounded-2xl",
+        cancelButton: "rounded-2xl",
       },
     });
 
