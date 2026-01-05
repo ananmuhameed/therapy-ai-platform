@@ -55,7 +55,9 @@ jobs:
         run: python manage.py migrate --noinput
 
       - name: Run backend tests
-        run: pytest -q
+        run: |
+          python -m pytest -q
+
 
   frontend:
     name: Frontend Dependency Check

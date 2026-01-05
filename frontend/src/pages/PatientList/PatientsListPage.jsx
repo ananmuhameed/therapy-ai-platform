@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { FiRefreshCw } from "react-icons/fi";
-import { User } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/axiosInstance";
 
-import BackButton from "../../components/ui/BackButton";
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 
 export default function PatientsListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // --- State ---
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -19,8 +18,10 @@ export default function PatientsListPage() {
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
 
-  const [showModal, setShowModal] = useState(false);
+  // Modal driven by URL: /patients?add=1
+  const [showAdd, setShowAdd] = useState(false);
 
+  // --- Data ---
   const fetchPatients = async () => {
     setLoading(true);
     setError("");
@@ -50,6 +51,13 @@ export default function PatientsListPage() {
     fetchPatients();
   }, []);
 
+  // URL -> modal state
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setShowAdd(params.get("add") === "1");
+  }, [location.search]);
+
+  // --- Derived ---
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
     const g = String(filterGender).toLowerCase();
@@ -57,8 +65,10 @@ export default function PatientsListPage() {
     return patients.filter((p) => {
       const name = String(p.full_name || p.name || "").toLowerCase();
       const gender = String(p.gender || "").toLowerCase();
+
       const matchSearch = !q || name.includes(q);
       const matchGender = g === "all" || gender === g;
+
       return matchSearch && matchGender;
     });
   }, [patients, search, filterGender]);
@@ -69,78 +79,61 @@ export default function PatientsListPage() {
     return `${filteredPatients.length} shown`;
   }, [loading, error, filteredPatients.length]);
 
+  // --- Handlers ---
   const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
 
-  const handleAddPatient = () => setShowModal(true);
+  // Open/close modal using URL (single source of truth)
+  const openAddModal = () => {
+    navigate("/patients?add=1", { replace: true });
+  };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
+  const closeAddModal = () => {
+    navigate("/patients", { replace: true });
     fetchPatients();
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="mx-auto max-w-screen-2xl px-2 py-6">
-        {/* Top Bar */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BackButton onClick={() => navigate("/dashboard")} />
+    <div className="w-full p-6 sm:p-8">
+      {/* Controls */}
+      <PatientsControls
+        totalLabel={totalLabel}
+        search={search}
+        setSearch={setSearch}
+        filterGender={filterGender}
+        setFilterGender={setFilterGender}
+        onRefresh={fetchPatients}
+        onAddPatient={openAddModal}
+      />
 
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3078E2]/10">
-                <User className="text-[#3078E2]" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Patients</h1>
-                <p className="text-sm text-gray-600">Manage your patient list.</p>
-              </div>
-            </div>
+      {/* Table */}
+      <PatientsTable
+        loading={loading}
+        error={error}
+        patients={filteredPatients}
+        onViewProfile={handleViewProfile}
+        onClearFilters={() => {
+          setSearch("");
+          setFilterGender("all");
+        }}
+        onAddPatient={openAddModal}
+      />
+
+      {/* Add Patient Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 z-50">
+          {/* overlay */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={closeAddModal}
+          />
+
+          {/* modal */}
+          <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+            {/* AddPatientForm already has its own width/bg/shadow */}
+            <AddPatientForm onClose={closeAddModal} />
           </div>
-
-          <button
-            onClick={fetchPatients}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
-            type="button"
-            title="Refresh"
-          >
-            <FiRefreshCw />
-            Refresh
-          </button>
         </div>
-
-        {/* Controls */}
-        <PatientsControls
-          totalLabel={totalLabel}
-          filterGender={filterGender}
-          onFilterGenderChange={setFilterGender}
-          search={search}
-          onSearchChange={setSearch}
-          onAddPatient={handleAddPatient}
-        />
-
-        {/* Table */}
-        <PatientsTable
-          loading={loading}
-          error={error}
-          patients={filteredPatients}
-          onViewProfile={handleViewProfile}
-          onClearFilters={() => {
-            setSearch("");
-            setFilterGender("all");
-          }}
-          onAddPatient={handleAddPatient}
-        />
-
-        {/* Modal (keep your behavior, just matches style) */}
-        {showModal && (
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="absolute inset-0" onClick={() => setShowModal(false)} />
-            <div className="relative z-10 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-              <AddPatientForm onClose={handleCloseModal} />
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
