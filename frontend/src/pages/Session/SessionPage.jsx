@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
+import { sessionAudioUploadSchema } from "../../Forms/schemas";
+import { parseServerErrors } from "../../Forms/serverErrors";
 
 // Sub-components
 import PatientSelector from "./PatientSelector";
@@ -7,6 +10,8 @@ import SessionActionButtons from "./SessionActionButtons";
 import RecordingInterface from "./RecordingInterface";
 
 export default function SessionPage() {
+  const navigate = useNavigate();
+
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -30,7 +35,7 @@ export default function SessionPage() {
     const fetchPatients = async () => {
       try {
         const { data } = await api.get("/patients/");
-        setPatients(Array.isArray(data) ? data : data.results || []);
+        setPatients(Array.isArray(data) ? data : data?.results || []);
       } catch (err) {
         console.error("Failed to load patients", err);
       }
@@ -38,7 +43,7 @@ export default function SessionPage() {
     fetchPatients();
   }, []);
 
-  // cleanup mic on unmount
+  // ✅ cleanup mic on unmount
   useEffect(() => {
     return () => {
       try {
@@ -51,54 +56,83 @@ export default function SessionPage() {
   }, []);
 
   // --- Logic ---
-  // ✅ Correct flow:
-  // 1) Create session (JSON)
-  // 2) Upload audio to /sessions/:id/upload-audio/ (multipart)
-  // ✅ No navigation
+  // ✅ Correct backend flow:
+  // 1) POST /sessions/ (JSON) to create session
+  // 2) POST /sessions/:id/upload-audio/ (multipart) to upload audio
+  // ✅ No auto navigation; we show success + optional button
   const handleUploadFile = async (patientId, file) => {
-    if (!patientId || !file) return;
-
-    setIsUploading(true);
     setUploadError("");
     setUploadSuccess("");
     setLastSessionId(null);
+    setIsUploading(true);
 
     try {
-      // 1) Create session (backend ModelViewSet expects JSON, not multipart)
+      // 0) Validate (Yup)
+      await sessionAudioUploadSchema.validate(
+        { patientId: Number(patientId), file },
+        { abortEarly: true }
+      );
+
+      // 1) Create session with JSON (required by your DRF perform_create)
       const createRes = await api.post("/sessions/", {
-        patient: patientId,
-        // If your backend requires session_date/duration, add them here.
-        // session_date: new Date().toISOString(),
+        patient: Number(patientId),
       });
 
-      const newSessionId = createRes?.data?.id;
-      if (!newSessionId) throw new Error("Session created but no id returned.");
+      const sessionId = createRes?.data?.id;
+      if (!sessionId) throw new Error("Session created but no id returned.");
 
-      // 2) Upload audio to the correct endpoint (this is what your backend supports)
+      // 2) Upload audio file to upload-audio action endpoint
       const formData = new FormData();
       formData.append("audio_file", file);
 
-      await api.post(`/sessions/${newSessionId}/upload-audio/`, formData, {
+      await api.post(`/sessions/${sessionId}/upload-audio/`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // 3) Quick verify (prevents fake “success”)
-      const verify = await api.get(`/sessions/${newSessionId}/`);
-      if (!verify?.data?.audio_url) {
-        throw new Error("Upload succeeded but audio_url is empty. Check backend storage/media settings.");
+      // 3) Verify quickly (optional but prevents fake “success”)
+      const verify = await api.get(`/sessions/${sessionId}/`);
+      // Your SessionDetailSerializer may expose audio_url or audio object. We do a safe check:
+      const hasAudio =
+        !!verify?.data?.audio_url ||
+        !!verify?.data?.audio?.audio_file ||
+        !!verify?.data?.audio;
+
+      if (!hasAudio) {
+        throw new Error(
+          "Upload succeeded but session does not show audio. Check serializer fields / storage settings."
+        );
       }
 
-      setLastSessionId(newSessionId);
-      setUploadSuccess("Audio saved successfully.");
+      setLastSessionId(sessionId);
+      setUploadSuccess("Audio uploaded. Transcription started.");
     } catch (err) {
       console.error(err);
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.audio_file?.[0] ||
-        err?.response?.data?.patient?.[0] ||
-        err?.message ||
-        "Failed to upload.";
-      setUploadError(msg);
+
+      // Yup validation error
+      if (err?.name === "ValidationError") {
+        setUploadError(err.message || "Invalid input.");
+      } else {
+        // API errors
+        const parsed = parseServerErrors?.(err);
+        const nonField = parsed?.nonFieldError;
+        const fieldErrors = parsed?.fieldErrors || {};
+
+        // common DRF shapes
+        const fallback =
+          err?.response?.data?.detail ||
+          err?.response?.data?.audio_file?.[0] ||
+          err?.response?.data?.patient?.[0] ||
+          err?.message ||
+          "Failed to upload.";
+
+        const msg =
+          nonField ||
+          fieldErrors.audio_file?.[0] ||
+          fieldErrors.patient?.[0] ||
+          fallback;
+
+        setUploadError(msg);
+      }
     } finally {
       setIsUploading(false);
     }
@@ -156,15 +190,22 @@ export default function SessionPage() {
           return;
         }
 
-        const ext = mime.includes("webm") ? "webm" : mime.includes("ogg") ? "ogg" : "wav";
-        const file = new File([blob], `recording_${Date.now()}.${ext}`, { type: mime });
+        const ext = mime.includes("webm")
+          ? "webm"
+          : mime.includes("ogg")
+          ? "ogg"
+          : "wav";
+
+        const file = new File([blob], `recording_${Date.now()}.${ext}`, {
+          type: mime,
+        });
 
         // reset UI
         setIsRecording(false);
         setIsPaused(false);
         setIsRecorderVisible(false);
 
-        // ✅ save only (no navigation)
+        // ✅ save (2-step API)
         await handleUploadFile(selectedPatientId, file);
       };
 
@@ -264,7 +305,9 @@ export default function SessionPage() {
         />
 
         {/* Messages */}
-        {uploadError && <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>}
+        {uploadError && (
+          <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>
+        )}
 
         {uploadSuccess && (
           <div className="mt-2 flex flex-col items-center gap-1">
@@ -274,7 +317,7 @@ export default function SessionPage() {
             {lastSessionId && (
               <button
                 type="button"
-                onClick={() => (window.location.href = `/sessions/${lastSessionId}`)}
+                onClick={() => navigate(`/sessions/${lastSessionId}`)}
                 className="text-xs font-medium text-[#3078E2] hover:underline"
               >
                 Open saved session

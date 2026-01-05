@@ -7,6 +7,12 @@ import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { FaGoogle } from "react-icons/fa";
 
+import { useAppFormik } from "../../Forms/useAppFormik";
+import {
+  loginSchema,
+  toLoginPayload,
+  mapAuthFieldErrors,
+} from "../../Forms/schemas";
 
 // Components
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
@@ -15,7 +21,6 @@ import AuthInput from "../../components/ui/AuthInput";
 
 export default function Login() {
   const navigate = useNavigate();
-
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,33 +59,18 @@ const googleLogin = useGoogleLogin({
     setError("");
     const email = formData.email.trim();
 
-    if (!email || !formData.password) {
-      setError("Please enter email and password.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const { data } = await api.post("/auth/login/", {
-        email,
-        password: formData.password,
-      });
+  const { formik, apiError } = useAppFormik({
+    initialValues: { email: "", password: "" },
+    validationSchema: loginSchema,
+    mapFieldErrors: mapAuthFieldErrors,
+    onSubmit: async (values) => {
+      const { data } = await api.post("/auth/login/", toLoginPayload(values));
 
       setAuth({ accessToken: data.access, user: data.user });
       navigate("/dashboard", { replace: true });
-    } catch (err) {
-      console.error(err);
-      const msg =
-        err?.response?.data?.detail ||
-        err?.response?.data?.non_field_errors?.[0] ||
-        "Login failed. Please check your credentials.";
-      setError(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+  });
 
-  // --- Form Content ---
   const FormSide = (
     <>
       <div className="mb-8">
@@ -92,39 +82,53 @@ const googleLogin = useGoogleLogin({
         </p>
       </div>
 
-      {error && <p className="mb-4 text-red-500 font-medium">{error}</p>}
+      {/* Server (non-field) error */}
+      {apiError && <p className="mb-4 text-red-500 font-medium">{apiError}</p>}
 
-      <div className="space-y-5">
-        <AuthInput
-          id="email"
-          name="email"
-          label="Email Address"
-          icon={Mail}
-          value={formData.email}
-          onChange={handleChange}
-          placeholder="you@example.com"
-          autoComplete="email"
-          // Pass specific styles to match the dark theme provided
-          style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
-        />
+      <form onSubmit={formik.handleSubmit} className="space-y-5">
+        <div>
+          <AuthInput
+            id="email"
+            name="email"
+            label="Email Address"
+            icon={Mail}
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="you@example.com"
+            autoComplete="email"
+            style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
+          />
+          {formik.touched.email && formik.errors.email ? (
+            <p className="mt-1 text-sm text-red-500">{formik.errors.email}</p>
+          ) : null}
+        </div>
 
-        <AuthInput
-          id="password"
-          name="password"
-          label="Password"
-          icon={Lock}
-          type="password"
-          isPassword={true}
-          showPassword={showPassword}
-          onTogglePassword={() => setShowPassword(!showPassword)}
-          value={formData.password}
-          onChange={handleChange}
-          placeholder="••••••••"
-          autoComplete="current-password"
-          style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
-        />
+        <div>
+          <AuthInput
+            id="password"
+            name="password"
+            label="Password"
+            icon={Lock}
+            type="password"
+            isPassword={true}
+            showPassword={showPassword}
+            onTogglePassword={() => setShowPassword(!showPassword)}
+            value={formik.values.password}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
+          />
+          {formik.touched.password && formik.errors.password ? (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.password}
+            </p>
+          ) : null}
+        </div>
 
-        {/* Remember & Forgot */}
+        {/* Remember & Forgot (unchanged) */}
         <div className="flex items-center justify-between">
           <label className="flex items-center cursor-pointer text-[#8D8F8E]">
             <input
@@ -144,18 +148,17 @@ const googleLogin = useGoogleLogin({
           </button>
         </div>
 
-        {/* Submit Button */}
         <button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
+          type="submit"
+          disabled={formik.isSubmitting}
           className="w-full py-3.5 rounded-xl font-semibold text-base transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           style={{ backgroundColor: "#5B687C", color: "#D4CDCB" }}
         >
-          {isSubmitting ? "Signing in..." : "Sign In"}
+          {formik.isSubmitting ? "Signing in..." : "Sign In"}
         </button>
-      </div>
+      </form>
 
-      {/* Social Buttons (Inline as requested in design) */}
+      {/* Rest unchanged */}
       <div className="flex items-center my-8">
         <div className="flex-grow border-t border-[#5B687C]"></div>
         <span className="mx-4 text-[#8D8F8E] text-sm">Or continue with</span>
@@ -177,7 +180,6 @@ const googleLogin = useGoogleLogin({
 
       </div>
 
-      {/* Switch to Signup */}
       <div className="mt-8 text-center text-[#8D8F8E]">
         Don&apos;t have an account?{" "}
         <Link
@@ -191,9 +193,6 @@ const googleLogin = useGoogleLogin({
   );
 
   return (
-    <AuthSplitLayout
-      leftContent={<LoginBranding />}
-      rightContent={FormSide}
-    />
+    <AuthSplitLayout leftContent={<LoginBranding />} rightContent={FormSide} />
   );
 }
