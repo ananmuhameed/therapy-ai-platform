@@ -1,13 +1,15 @@
-import { X } from "lucide-react";
-import api from "../../api/axiosInstance";
+import React, { useState, useRef } from "react";
+import { useCreatePatient } from "../../queries/patients"; // Assuming you're using React Query here
 import { useAppFormik } from "../../Forms/useAppFormik";
 import {
   patientCreateSchema,
   mapPatientFieldErrors,
   toPatientCreatePayload,
 } from "../../Forms/schemas";
+// import { X } from "./react-icons/x"; // Assuming X is an icon for closing the form
 
 export default function AddPatientForm({ onClose }) {
+  const createPatient = useCreatePatient();
   const { formik, apiError } = useAppFormik({
     initialValues: {
       fullName: "",
@@ -22,7 +24,7 @@ export default function AddPatientForm({ onClose }) {
     mapFieldErrors: mapPatientFieldErrors,
     onSubmit: async (values) => {
       const payload = toPatientCreatePayload(values);
-      await api.post("/patients/", payload);
+      await createPatient.mutateAsync(payload);  // Using React Query for patient creation
       onClose?.();
     },
   });
@@ -41,25 +43,28 @@ export default function AddPatientForm({ onClose }) {
     <div className="w-[min(92vw,520px)] rounded-2xl bg-white shadow-xl px-6 pt-8 pb-0">
       {/* Header */}
       <div className="relative flex items-center justify-center">
-  <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] bg-clip-text text-transparent">
-    New Patient
-  </h1>
+        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] bg-clip-text text-transparent">
+          New Patient
+        </h1>
 
-  <button
-    onClick={onClose}
-    className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
-  >
-    <X className="h-5 w-5" />
-  </button>
-</div>
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+        >
+          {/* <X className="h-5 w-5" /> */}
+        </button>
+      </div>
 
       <div className="px-5 pb-6">
+        {/* Non-field/server error */}
         {apiError && (
           <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {apiError}
           </div>
         )}
 
+        {/* Form */}
         <form onSubmit={formik.handleSubmit} className="mt-5 space-y-5">
           {/* Full Name */}
           <div>
