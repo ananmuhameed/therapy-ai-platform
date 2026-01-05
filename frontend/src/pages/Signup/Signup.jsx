@@ -2,10 +2,14 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User } from "lucide-react";
 import api from "../../api/axiosInstance";
-import {signupSchema,toSignupPayload,mapAuthFieldErrors,} from "../../Forms/schemas";
+import { useGoogleLogin } from "@react-oauth/google";
+import { FaGoogle } from "react-icons/fa";
+import { setAuth } from "../../auth/storage";
+
+// Components
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
 import AuthInput from "../../components/ui/AuthInput";
-import SocialButtons from "./SocialButtons";
+import { signupSchema, toSignupPayload, mapAuthFieldErrors } from "../../Forms/schemas";
 import { useAppFormik } from "../../Forms/useAppFormik";
 
 export default function Signup() {
@@ -26,9 +30,31 @@ export default function Signup() {
     mapFieldErrors: mapAuthFieldErrors,
     onSubmit: async (values) => {
       setMessage("");
-
       await api.post("/auth/register/", toSignupPayload(values));
       navigate("/login", { replace: true });
+    },
+  });
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const { data } = await api.post("/auth/google/login/", {
+          access_token: tokenResponse.access_token,
+        });
+
+        setAuth({
+          accessToken: data.access,
+          user: data.user,
+        });
+
+        navigate("/dashboard", { replace: true });
+      } catch (err) {
+        console.error(err);
+        setMessage("Google login failed. Please try again.");
+      }
+    },
+    onError: () => {
+      setMessage("Google login failed.");
     },
   });
 
@@ -49,15 +75,14 @@ export default function Signup() {
       <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-[#F0F3FA]">
         Create Account
       </h2>
-      <p className="text-base mb-6 text-[#8D8F8E]">
-        Fill in your details to get started
-      </p>
+      <p className="text-base mb-6 text-[#8D8F8E]">Fill in your details to get started</p>
 
       {/* Server (non-field) error */}
       {apiError && <p className="mb-4 text-red-500 font-medium">{apiError}</p>}
       {message && <p className="mb-4 text-green-600 font-medium">{message}</p>}
 
       <form onSubmit={formik.handleSubmit} className="space-y-5">
+        {/* Full Name */}
         <div>
           <AuthInput
             id="fullName"
@@ -71,12 +96,11 @@ export default function Signup() {
             autoComplete="name"
           />
           {formik.touched.fullName && formik.errors.fullName ? (
-            <p className="mt-1 text-sm text-red-500">
-              {formik.errors.fullName}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{formik.errors.fullName}</p>
           ) : null}
         </div>
 
+        {/* Email */}
         <div>
           <AuthInput
             id="email"
@@ -94,6 +118,7 @@ export default function Signup() {
           ) : null}
         </div>
 
+        {/* Password */}
         <div>
           <AuthInput
             id="password"
@@ -111,12 +136,11 @@ export default function Signup() {
             autoComplete="new-password"
           />
           {formik.touched.password && formik.errors.password ? (
-            <p className="mt-1 text-sm text-red-500">
-              {formik.errors.password}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{formik.errors.password}</p>
           ) : null}
         </div>
 
+        {/* Confirm Password */}
         <div>
           <AuthInput
             id="confirmPassword"
@@ -136,12 +160,11 @@ export default function Signup() {
             autoComplete="new-password"
           />
           {formik.touched.confirmPassword && formik.errors.confirmPassword ? (
-            <p className="mt-1 text-sm text-red-500">
-              {formik.errors.confirmPassword}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{formik.errors.confirmPassword}</p>
           ) : null}
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={formik.isSubmitting}
@@ -151,7 +174,21 @@ export default function Signup() {
         </button>
       </form>
 
-      <SocialButtons />
+      <div className="flex items-center my-8">
+        <div className="flex-grow border-t border-[#5B687C]"></div>
+        <span className="mx-4 text-[#8D8F8E] text-sm">Or continue with</span>
+        <div className="flex-grow border-t border-[#5B687C]"></div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
+        <button
+          onClick={() => googleLogin()}
+          className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+        >
+          <FaGoogle />
+          Continue with Google
+        </button>
+      </div>
 
       <p className="mt-8 text-center text-[#8D8F8E]">
         Already have an account?{" "}

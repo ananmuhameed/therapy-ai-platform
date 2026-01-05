@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import RegisterView, MeView, TherapistProfileView
 from .jwt import LoginView, CookieTokenRefreshView, logout_view
+from .views import GoogleLoginView
 
 urlpatterns = [
     path("auth/register/", RegisterView.as_view(), name="auth_register"),
@@ -9,4 +10,6 @@ urlpatterns = [
     path("auth/logout/", logout_view, name="auth_logout"),
     path("auth/me/", MeView.as_view(), name="auth_me"),
     path("therapist/profile/", TherapistProfileView.as_view(), name="therapist_profile"),
+    path("auth/google/login/", GoogleLoginView.as_view(), name="auth_google_login"),
+
 ]
