@@ -4,9 +4,7 @@ import { Mail, Lock } from "lucide-react";
 import api from "../../api/axiosInstance";
 import { setAuth } from "../../auth/storage";
 import { useGoogleLogin } from "@react-oauth/google";
-import axios from "axios";
 import { FaGoogle } from "react-icons/fa";
-
 import { useAppFormik } from "../../Forms/useAppFormik";
 import {
   loginSchema,
@@ -24,68 +22,73 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "" });
-
-const googleLogin = useGoogleLogin({
-  onSuccess: async (tokenResponse) => {
-    try {
-      // Send token directly to backend
-      const { data } = await api.post("/auth/google/login/", {
-        access_token: tokenResponse.access_token,
-      });
-
-      // Store JWT + user
-      setAuth({
-        accessToken: data.access,
-        user: data.user,
-      });
-
-      navigate("/dashboard", { replace: true });
-
-    } catch (err) {
-      console.error(err);
-      setError("Google login failed.");
-    }
-  },
-  onError: () => setError("Google login failed."),
-});
-
-  
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async () => {
-    setError("");
-    const email = formData.email.trim();
 
   const { formik, apiError } = useAppFormik({
-    initialValues: { email: "", password: "" },
+    initialValues: {
+      email: "",
+      password: "",
+    },
     validationSchema: loginSchema,
     mapFieldErrors: mapAuthFieldErrors,
     onSubmit: async (values) => {
-      const { data } = await api.post("/auth/login/", toLoginPayload(values));
-
-      setAuth({ accessToken: data.access, user: data.user });
-      navigate("/dashboard", { replace: true });
+      setIsSubmitting(true);
+      try {
+        const { data } = await api.post("/auth/login/", toLoginPayload(values));
+        setAuth({ accessToken: data.access, user: data.user });
+        navigate("/dashboard", { replace: true });
+      } catch (err) {
+        setError("Login failed. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     },
   });
 
-  const FormSide = (
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const { data } = await api.post("/auth/google/login/", {
+          access_token: tokenResponse.access_token,
+        });
+
+        setAuth({
+          accessToken: data.access,
+          user: data.user,
+        });
+
+        navigate("/dashboard", { replace: true });
+      } catch (err) {
+        console.error(err);
+        setError("Google login failed.");
+      }
+    },
+    onError: () => setError("Google login failed."),
+  });
+
+  const LeftSide = (
     <>
-      <div className="mb-8">
-        <h2 className="text-3xl lg:text-4xl font-bold mb-3 text-[#F0F3FA]">
-          Sign In
-        </h2>
-        <p className="text-base text-[#8D8F8E]">
-          Enter your credentials to continue
-        </p>
-      </div>
+      <h1 className="text-4xl lg:text-5xl font-bold mb-4 text-[#F0F3FA]">
+        Welcome Back
+      </h1>
+      <p className="text-base lg:text-lg text-[#ded8d7] leading-relaxed">
+        Please sign in to continue to your dashboard
+      </p>
+    </>
+  );
+
+  const RightSide = (
+    <>
+      <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-[#F0F3FA]">
+        Sign In
+      </h2>
+      <p className="text-base mb-6 text-[#8D8F8E]">Enter your credentials</p>
 
       {/* Server (non-field) error */}
       {apiError && <p className="mb-4 text-red-500 font-medium">{apiError}</p>}
+      {error && <p className="mb-4 text-red-500 font-medium">{error}</p>}
 
       <form onSubmit={formik.handleSubmit} className="space-y-5">
+        {/* Email */}
         <div>
           <AuthInput
             id="email"
@@ -97,13 +100,13 @@ const googleLogin = useGoogleLogin({
             onBlur={formik.handleBlur}
             placeholder="you@example.com"
             autoComplete="email"
-            style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
           />
           {formik.touched.email && formik.errors.email ? (
             <p className="mt-1 text-sm text-red-500">{formik.errors.email}</p>
           ) : null}
         </div>
 
+        {/* Password */}
         <div>
           <AuthInput
             id="password"
@@ -119,16 +122,13 @@ const googleLogin = useGoogleLogin({
             onBlur={formik.handleBlur}
             placeholder="••••••••"
             autoComplete="current-password"
-            style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
           />
           {formik.touched.password && formik.errors.password ? (
-            <p className="mt-1 text-sm text-red-500">
-              {formik.errors.password}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{formik.errors.password}</p>
           ) : null}
         </div>
 
-        {/* Remember & Forgot (unchanged) */}
+        {/* Remember & Forgot */}
         <div className="flex items-center justify-between">
           <label className="flex items-center cursor-pointer text-[#8D8F8E]">
             <input
@@ -148,6 +148,7 @@ const googleLogin = useGoogleLogin({
           </button>
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={formik.isSubmitting}
@@ -158,7 +159,7 @@ const googleLogin = useGoogleLogin({
         </button>
       </form>
 
-      {/* Rest unchanged */}
+      {/* Social login */}
       <div className="flex items-center my-8">
         <div className="flex-grow border-t border-[#5B687C]"></div>
         <span className="mx-4 text-[#8D8F8E] text-sm">Or continue with</span>
@@ -166,18 +167,14 @@ const googleLogin = useGoogleLogin({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
-
         <button
           type="button"
           onClick={() => googleLogin()}
-
           className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
         >
-         <FaGoogle />
- Continue with Google
+          <FaGoogle />
+          Continue with Google
         </button>
-
-
       </div>
 
       <div className="mt-8 text-center text-[#8D8F8E]">
@@ -192,7 +189,5 @@ const googleLogin = useGoogleLogin({
     </>
   );
 
-  return (
-    <AuthSplitLayout leftContent={<LoginBranding />} rightContent={FormSide} />
-  );
+  return <AuthSplitLayout leftContent={<LoginBranding />} rightContent={RightSide} />;
 }
