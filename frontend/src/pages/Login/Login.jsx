@@ -3,6 +3,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock } from "lucide-react";
 import api from "../../api/axiosInstance";
 import { setAuth } from "../../auth/storage";
+import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { FaGoogle } from "react-icons/fa";
+
 import { useAppFormik } from "../../Forms/useAppFormik";
 import {
   loginSchema,
@@ -18,6 +22,42 @@ import AuthInput from "../../components/ui/AuthInput";
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
+
+const googleLogin = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
+    try {
+      // Send token directly to backend
+      const { data } = await api.post("/auth/google/login/", {
+        access_token: tokenResponse.access_token,
+      });
+
+      // Store JWT + user
+      setAuth({
+        accessToken: data.access,
+        user: data.user,
+      });
+
+      navigate("/dashboard", { replace: true });
+
+    } catch (err) {
+      console.error(err);
+      setError("Google login failed.");
+    }
+  },
+  onError: () => setError("Google login failed."),
+});
+
+  
+  const handleChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async () => {
+    setError("");
+    const email = formData.email.trim();
 
   const { formik, apiError } = useAppFormik({
     initialValues: { email: "", password: "" },
@@ -125,16 +165,19 @@ export default function Login() {
         <div className="flex-grow border-t border-[#5B687C]"></div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {["Google", "Cloud", "Email"].map((provider) => (
-          <button
-            key={provider}
-            type="button"
-            className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb] hover:bg-white/5 transition-colors"
-          >
-            {provider}
-          </button>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
+
+        <button
+          type="button"
+          onClick={() => googleLogin()}
+
+          className="py-3 rounded-xl border-2 flex items-center justify-center gap-2 border-[#8d949f] text-[#f6fafb]"
+        >
+         <FaGoogle />
+ Continue with Google
+        </button>
+
+
       </div>
 
       <div className="mt-8 text-center text-[#8D8F8E]">
