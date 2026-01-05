@@ -39,7 +39,9 @@ api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-
+     if (original.url.includes("/auth/login/")) {
+      return Promise.reject(err);
+    }
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
 

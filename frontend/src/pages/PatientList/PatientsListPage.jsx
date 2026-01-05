@@ -4,7 +4,6 @@ import { usePatients } from "../../queries/patients";
 import { qk } from "../../queries/queryKeys";
 import { useQueryClient } from "@tanstack/react-query";
 
-// Components
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
@@ -35,14 +34,24 @@ export default function PatientsListPage() {
     setShowAdd(params.get("add") === "1");
   }, [location.search]);
 
+  // URL -> modal state
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setShowAdd(params.get("add") === "1");
+  }, [location.search]);
+
+  // --- Derived ---
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const g = String(filterGender).toLowerCase();
+
     return patients.filter((p) => {
-      const name = (p.full_name || p.name || "").toLowerCase();
+      const name = String(p.full_name || p.name || "").toLowerCase();
       const gender = String(p.gender || "").toLowerCase();
+
       const matchSearch = !q || name.includes(q);
-      const matchGender =
-        filterGender === "all" || gender === filterGender.toLowerCase();
+      const matchGender = g === "all" || gender === g;
+
       return matchSearch && matchGender;
     });
   }, [patients, search, filterGender]);
@@ -53,8 +62,12 @@ export default function PatientsListPage() {
     return `${filteredPatients.length} shown`;
   }, [isLoading, error, filteredPatients.length]);
 
-  const handleViewProfile = (p) => {
-    navigate(`/patients/${p.id}`);
+  // --- Handlers ---
+  const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
+
+  // Open/close modal using URL (single source of truth)
+  const openAddModal = () => {
+    navigate("/patients?add=1", { replace: true });
   };
 
   const handleAddPatient = () => {
@@ -69,6 +82,7 @@ export default function PatientsListPage() {
   return (
     <div className="w-full p-6 sm:p-8">
       {/* 1. Controls Section */}
+      {/* Controls */}
       <PatientsControls
         totalLabel={totalLabel}
         search={search}
@@ -89,7 +103,7 @@ export default function PatientsListPage() {
           setSearch("");
           setFilterGender("all");
         }}
-        onAddPatient={handleAddPatient}
+        onAddPatient={openAddModal}
       />
       {/*Add Patient Modal */}
       {showAdd && (
@@ -102,9 +116,8 @@ export default function PatientsListPage() {
 
           {/* modal */}
           <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
-              <AddPatientForm onClose={closeAddModal} />
-            </div>
+            {/* AddPatientForm already has its own width/bg/shadow */}
+            <AddPatientForm onClose={closeAddModal} />
           </div>
         </div>
       )}

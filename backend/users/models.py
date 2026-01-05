@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.core.exceptions import ValidationError
-
+from core.models import TimeStampedModel
 
 # ---------- UserManager / User  ----------
 class UserManager(BaseUserManager):
@@ -40,7 +40,7 @@ class User(AbstractUser):
 
 
 # ---------- TherapistProfile (OneToOne with User) ----------
-class TherapistProfile(models.Model):
+class TherapistProfile(TimeStampedModel):
     # link to user (one-to-one)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -58,8 +58,8 @@ class TherapistProfile(models.Model):
 
     is_completed = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at = models.DateTimeField(auto_now_add=True)
+    # updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Therapist Profile"

@@ -13,7 +13,7 @@ export const patientCreateSchema = Yup.object({
       then: (schema) =>
         schema.matches(
           /^\d{11}$/,
-          "Egyptian phone number must be exactly 11 digits"
+          "Phone number must be exactly 11 digits"
         ),
       otherwise: (schema) =>
         schema.matches(/^\d{7,15}$/, "Phone must be 7 to 15 digits"),

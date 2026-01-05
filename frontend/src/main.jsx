@@ -1,14 +1,16 @@
-import { StrictMode } from "react";
+import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import React from "react";
 import { HashRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-import "./index.css";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App.jsx";
+import "./index.css";
 
-//client
+// Google OAuth client ID
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// React Query Client configuration
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -22,13 +24,16 @@ const queryClient = new QueryClient({
   },
 });
 
+// Rendering the app with both QueryClientProvider and GoogleOAuthProvider
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <HashRouter>
-        <App />
-      </HashRouter>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <GoogleOAuthProvider clientId={CLIENT_ID}>
+      <QueryClientProvider client={queryClient}>
+        <HashRouter>
+          <App />
+        </HashRouter>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </GoogleOAuthProvider>
   </StrictMode>
 );

@@ -1,3 +1,55 @@
-
 @tailwind utilities;
 @import "tailwindcss";
+
+
+
+/* React Toastify Tailwind styles */
+
+.Toastify__toast {
+ @apply bg-white text-gray-800 rounded-xl shadow-lg border border-gray-100 px-4 py-3;
+}
+
+.Toastify__toast--success {
+  @apply bg-green-500 text-white;
+}
+
+.Toastify__toast--error {
+  @apply bg-red-500 text-white;
+}
+
+.Toastify__toast--warning {
+  @apply bg-yellow-400 text-gray-900;
+}
+
+.Toastify__toast--info {
+  @apply bg-blue-500 text-white;
+}
+
+.Toastify__progress-bar {
+  @apply bg-white/70;
+}
+
+.Toastify__progress-bar {
+  @apply bg-white/70;
+}
+
+/* --- ADD THIS SECTION BELOW TO FIX CHROME --- */
+
+:root {
+  /* Force the z-index variable to be higher than your dashboard/modals */
+  --toastify-z-index: 99999999 !important;
+}
+
+.Toastify__toast-container {
+  /* 1. Disable the transform that traps the toast behind backgrounds in Chrome */
+  transform: none !important;
+  -webkit-transform: none !important;
+  
+  /* 2. Force fixed positioning on top of everything */
+  position: fixed !important;
+  z-index: var(--toastify-z-index) !important;
+  
+  /* 3. Ensure it is not zero-width */
+  width: auto !important;
+  min-width: 300px;
+}
