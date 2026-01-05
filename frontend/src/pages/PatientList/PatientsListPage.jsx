@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import api from "../../api/axiosInstance";
 import Swal from "sweetalert2";
-import { usePatients } from "../../queries/patients";
-import { qk } from "../../queries/queryKeys";
-import { useQueryClient } from "@tanstack/react-query";
 
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 
 export default function PatientsListPage() {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // --- State ---
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
-  
+
   const [showAdd, setShowAdd] = useState(false);
   const [profileBlocked, setProfileBlocked] = useState(false); 
 
@@ -63,24 +66,10 @@ export default function PatientsListPage() {
       setLoading(false);
     }
   };
-  // --- Logic ---
-  const {
-    data: patients = [],
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = usePatients();
-
-  const errorMsg = useMemo(() => {
-    if (!error) return "";
-    return "Failed to load patients.";
-  }, [error]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setShowAdd(params.get("add") === "1");
-  }, [location.search]);
+    fetchPatients();
+  }, []);
 
   // URL -> modal state
   useEffect(() => {
@@ -102,10 +91,10 @@ export default function PatientsListPage() {
   }, [patients, search, filterGender]);
 
   const totalLabel = useMemo(() => {
-    if (isLoading) return "Loading…";
+    if (loading) return "Loading…";
     if (error) return "—";
     return `${filteredPatients.length} shown`;
-  }, [isLoading, error, filteredPatients.length]);
+  }, [loading, error, filteredPatients.length]);
 
   // --- Handlers ---
   const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
@@ -131,18 +120,13 @@ export default function PatientsListPage() {
     navigate("/patients?add=1", { replace: true });
   };
 
-  const handleAddPatient = () => {
-    navigate("/patients?add=1");
-  };
   const closeAddModal = () => {
-    setShowAdd(false);
     navigate("/patients", { replace: true });
-    queryClient.invalidateQueries({ queryKey: qk.patients });
+    fetchPatients();
   };
 
   return (
     <div className="w-full p-6 sm:p-8">
-      {/* 1. Controls Section */}
       {/* Controls */}
       <PatientsControls
         totalLabel={totalLabel}
@@ -155,10 +139,10 @@ export default function PatientsListPage() {
         addDisabled={profileBlocked} 
       />
 
-      {/* 2. Table Section */}
+      {/* Table */}
       <PatientsTable
-        loading={isLoading}
-        error={errorMsg}
+        loading={loading}
+        error={error}
         patients={filteredPatients}
         onViewProfile={handleViewProfile}
         onClearFilters={() => {
@@ -166,9 +150,10 @@ export default function PatientsListPage() {
           setFilterGender("all");
         }}
         onAddPatient={openAddModal}
-        addDisabled={profileBlocked} 
+        addDisabled={profileBlocked}
       />
-      {/*Add Patient Modal */}
+
+      {/* Add Patient Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50">
           <div
