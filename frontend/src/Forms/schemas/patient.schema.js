@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-
+const TEN_YEARS_MS = 10 * 365.25 * 24 * 60 * 60 * 1000;
 /*frontend fields*/
 export const patientCreateSchema = Yup.object({
   fullName: Yup.string().trim().required("Full name is required"),
@@ -7,12 +7,30 @@ export const patientCreateSchema = Yup.object({
   countryCode: Yup.string().required("Country code is required"),
   phone: Yup.string()
     .trim()
-    .matches(/^\d{7,15}$/, "Phone must be 7 to 15 digits")
-    .required("Phone is required"),
+    .required("Phone is required")
+    .when("countryCode", {
+      is: "+20",
+      then: (schema) =>
+        schema.matches(
+          /^\d{11}$/,
+          "Egyptian phone number must be exactly 11 digits"
+        ),
+      otherwise: (schema) =>
+        schema.matches(/^\d{7,15}$/, "Phone must be 7 to 15 digits"),
+    }),
   gender: Yup.string()
     .oneOf(["female", "male"], "Select gender")
     .required("Gender is required"),
-  dob: Yup.string().required("Date of birth is required"),
+
+  dob: Yup.date()
+    .typeError("Date of birth is required")
+    .required("Date of birth is required")
+    .max(new Date(), "Date of birth cannot be in the future")
+    .test("min-age", "Patient must be at least 10 years old", (value) => {
+      if (!value) return false;
+      return Date.now() - new Date(value).getTime() >= TEN_YEARS_MS;
+    }),
+
   notes: Yup.string().nullable(),
 });
 

@@ -1,9 +1,15 @@
-import api from "../../api/axiosInstance";
+//import api from "../../api/axiosInstance";
 import { useAppFormik } from "../../Forms/useAppFormik";
-import {patientCreateSchema,mapPatientFieldErrors,toPatientCreatePayload,} from "../../Forms/schemas";
+import {
+  patientCreateSchema,
+  mapPatientFieldErrors,
+  toPatientCreatePayload,
+} from "../../Forms/schemas";
 import "./AddPatientForm.css";
+import { useCreatePatient } from "../../queries/patients";
 
 export default function AddPatientForm({ onClose }) {
+  const createPatient = useCreatePatient();
   const { formik, apiError } = useAppFormik({
     initialValues: {
       fullName: "",
@@ -18,7 +24,7 @@ export default function AddPatientForm({ onClose }) {
     mapFieldErrors: mapPatientFieldErrors,
     onSubmit: async (values) => {
       const payload = toPatientCreatePayload(values);
-      await api.post("/patients/", payload);
+      await createPatient.mutateAsync(payload);
       onClose?.();
     },
   });
@@ -28,7 +34,9 @@ export default function AddPatientForm({ onClose }) {
       <h1 className="ap-title">New Patient</h1>
 
       {/* Non-field/server error */}
-      {apiError ? <p style={{ color: "red", marginBottom: 12 }}>{apiError}</p> : null}
+      {apiError ? (
+        <p style={{ color: "red", marginBottom: 12 }}>{apiError}</p>
+      ) : null}
 
       <form className="ap-form" onSubmit={formik.handleSubmit}>
         {/* Full Name */}
