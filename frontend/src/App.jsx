@@ -10,9 +10,12 @@ import PatientsListPage from "./pages/PatientList/PatientsListPage";
 import Session from "./pages/Session/SessionPage";
 import PatientProfile from "./pages/PatientProfile/PatientProfile";
 import TherapistProfile from "./pages/TherapistProfile/TherapistProfile";
-import SessionDetail from "./pages/SessionDetails/SessionDetails";
-import SessionsListPage from "./pages/SessionsList/SessionsListPage";
+import SessionDetailsPage from "./pages/SessionDetails/SessionDetailsPage";
+import SessionsPage from "./pages/SessionsList/SessionsPage";
 import ReportsPage from "./pages/Report/ReportsPage";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 
 function App() {
   const navigate = useNavigate();
@@ -22,22 +25,33 @@ function App() {
   }, [navigate]);
 
   return (
+    <>
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/patients/:patientId" element={<PatientProfile />} />
         <Route path="/therapistprofile" element={<TherapistProfile />} />
-        <Route path="/sessions/:sessionId" element={<SessionDetail />} />
+        <Route path="/sessions/:sessionId" element={<SessionDetailsPage />} />
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sessions/new" element={<Session />} />
           <Route path="/patients" element={<PatientsListPage />} />
-          <Route path="/sessions" element={<SessionsListPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
 
         </Route>
       </Routes>
+      <ToastContainer
+  position="top-right"
+  autoClose={3000}
+  hideProgressBar={false}
+  closeOnClick
+  pauseOnHover
+  draggable
+  style={{ zIndex: 999999 }}
+/>
+      </>
   );
 }
 

@@ -72,3 +72,7 @@ class TherapistProfileUpdateSerializer(serializers.ModelSerializer):
         model = TherapistProfile
         exclude = ("user", "created_at", "updated_at")
         read_only_fields = ("is_completed",)
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    access_token = serializers.CharField()

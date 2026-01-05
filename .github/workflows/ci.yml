@@ -9,31 +9,34 @@ jobs:
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: backend
+
     services:
       db:
         image: postgres:16
         env:
-          POSTGRES_DB: therapy_db
-          POSTGRES_USER: therapy_user
-          POSTGRES_PASSWORD: therapy_pass
+          POSTGRES_DB: ci_db
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_pass
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U therapy_user -d therapy_db"
+          --health-cmd="pg_isready -U ci_user -d ci_db"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
       DJANGO_SETTINGS_MODULE: core.settings
-      DB_NAME: therapy_db
-      DB_USER: therapy_user
-      DB_PASSWORD: therapy_pass
-      DB_HOST: 127.0.0.1
-      DB_PORT: "5432"
+      DJANGO_SECRET_KEY: ci-secret-key-not-for-production
+      POSTGRES_DB: ci_db
+      POSTGRES_USER: ci_user
+      POSTGRES_PASSWORD: ci_pass
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: "5432"
 
     steps:
       - name: Checkout repository
@@ -44,14 +47,26 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Install backend dependencies
-        run: pip install -r requirements.txt
+        run: uv pip install --system -r requirements.txt
+
+      - name: Wait for database
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U ci_user; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
 
       - name: Run migrations
         run: python manage.py migrate --noinput
 
       - name: Run backend tests
-        run: pytest -q
+        run: |
+          python -m pytest -q
+
 
   frontend:
     name: Frontend Dependency Check
