@@ -30,8 +30,12 @@ export default function Signup() {
     mapFieldErrors: mapAuthFieldErrors,
     onSubmit: async (values) => {
       setMessage("");
-      await api.post("/auth/register/", toSignupPayload(values));
-      navigate("/login", { replace: true });
+      try {
+        await api.post("/auth/register/", toSignupPayload(values));
+        navigate("/login", { replace: true });
+      } catch (error) {
+        setMessage("Registration failed. Please try again.");
+      }
     },
   });
 
@@ -150,9 +154,7 @@ export default function Signup() {
             type="password"
             isPassword={true}
             showPassword={showConfirmPassword}
-            onTogglePassword={() =>
-              setShowConfirmPassword(!showConfirmPassword)
-            }
+            onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
             value={formik.values.confirmPassword}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
@@ -192,10 +194,7 @@ export default function Signup() {
 
       <p className="mt-8 text-center text-[#8D8F8E]">
         Already have an account?{" "}
-        <Link
-          to="/login"
-          className="font-semibold text-[#ebf2f5] hover:underline"
-        >
+        <Link to="/login" className="font-semibold text-[#ebf2f5] hover:underline">
           Sign in
         </Link>
       </p>
