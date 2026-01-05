@@ -1,55 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import api from "../../api/axiosInstance";
+import { usePatients } from "../../queries/patients";
+import { qk } from "../../queries/queryKeys";
+import { useQueryClient } from "@tanstack/react-query";
 
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 
 export default function PatientsListPage() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
-
-  // --- State ---
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
-
-  // Modal driven by URL: /patients?add=1
   const [showAdd, setShowAdd] = useState(false);
+  // --- Logic ---
+  const {
+    data: patients = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = usePatients();
 
-  // --- Data ---
-  const fetchPatients = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await api.get("/patients/");
-      const list = Array.isArray(res.data) ? res.data : res.data?.results || [];
-      setPatients(list);
-    } catch (err) {
-      console.error(err);
-      const status = err?.response?.status;
-      const data = err?.response?.data;
-
-      let msg = "Failed to load patients.";
-      if (status === 401) msg = "Unauthorized. Please login again.";
-      else if (status === 403) msg = "Forbidden. You don’t have permission.";
-      else if (status === 404) msg = "Patients not found.";
-      else if (data?.detail) msg = data.detail;
-
-      setError(msg);
-      setPatients([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const errorMsg = useMemo(() => {
+    if (!error) return "";
+    return "Failed to load patients.";
+  }, [error]);
 
   useEffect(() => {
-    fetchPatients();
-  }, []);
+    const params = new URLSearchParams(location.search);
+    setShowAdd(params.get("add") === "1");
+  }, [location.search]);
 
   // URL -> modal state
   useEffect(() => {
@@ -74,10 +57,10 @@ export default function PatientsListPage() {
   }, [patients, search, filterGender]);
 
   const totalLabel = useMemo(() => {
-    if (loading) return "Loading…";
+    if (isLoading) return "Loading…";
     if (error) return "—";
     return `${filteredPatients.length} shown`;
-  }, [loading, error, filteredPatients.length]);
+  }, [isLoading, error, filteredPatients.length]);
 
   // --- Handlers ---
   const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
@@ -87,13 +70,18 @@ export default function PatientsListPage() {
     navigate("/patients?add=1", { replace: true });
   };
 
+  const handleAddPatient = () => {
+    navigate("/patients?add=1");
+  };
   const closeAddModal = () => {
+    setShowAdd(false);
     navigate("/patients", { replace: true });
-    fetchPatients();
+    queryClient.invalidateQueries({ queryKey: qk.patients });
   };
 
   return (
     <div className="w-full p-6 sm:p-8">
+      {/* 1. Controls Section */}
       {/* Controls */}
       <PatientsControls
         totalLabel={totalLabel}
@@ -101,14 +89,14 @@ export default function PatientsListPage() {
         setSearch={setSearch}
         filterGender={filterGender}
         setFilterGender={setFilterGender}
-        onRefresh={fetchPatients}
-        onAddPatient={openAddModal}
+        onRefresh={refetch}
+        onAddPatient={handleAddPatient}
       />
 
-      {/* Table */}
+      {/* 2. Table Section */}
       <PatientsTable
-        loading={loading}
-        error={error}
+        loading={isLoading}
+        error={errorMsg}
         patients={filteredPatients}
         onViewProfile={handleViewProfile}
         onClearFilters={() => {
@@ -117,8 +105,7 @@ export default function PatientsListPage() {
         }}
         onAddPatient={openAddModal}
       />
-
-      {/* Add Patient Modal */}
+      {/*Add Patient Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50">
           {/* overlay */}
