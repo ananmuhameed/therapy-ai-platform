@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/axiosInstance";
+import Swal from "sweetalert2";
 
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
@@ -18,8 +19,31 @@ export default function PatientsListPage() {
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
 
-  // Modal driven by URL: /patients?add=1
   const [showAdd, setShowAdd] = useState(false);
+  const [profileBlocked, setProfileBlocked] = useState(false); 
+
+  // --- Alert ---
+  const showProfileAlert = () => {
+    Swal.fire({
+      icon: "warning",
+      iconColor: "#3078E2",
+      title: "Profile incomplete",
+      text: "Please complete your profile first.",
+      showCancelButton: true,
+      confirmButtonText: "Go to profile",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#3078E2",
+      customClass: {
+        popup: "rounded-2xl",
+        confirmButton: "rounded-2xl",
+        cancelButton: "rounded-2xl",
+      },
+    }).then((res) => {
+      if (res.isConfirmed) {
+        navigate("/therapistprofile");
+      }
+    });
+  };
 
   // --- Data ---
   const fetchPatients = async () => {
@@ -30,15 +54,11 @@ export default function PatientsListPage() {
       const list = Array.isArray(res.data) ? res.data : res.data?.results || [];
       setPatients(list);
     } catch (err) {
-      console.error(err);
       const status = err?.response?.status;
-      const data = err?.response?.data;
-
       let msg = "Failed to load patients.";
+
       if (status === 401) msg = "Unauthorized. Please login again.";
       else if (status === 403) msg = "Forbidden. You don’t have permission.";
-      else if (status === 404) msg = "Patients not found.";
-      else if (data?.detail) msg = data.detail;
 
       setError(msg);
       setPatients([]);
@@ -66,10 +86,7 @@ export default function PatientsListPage() {
       const name = String(p.full_name || p.name || "").toLowerCase();
       const gender = String(p.gender || "").toLowerCase();
 
-      const matchSearch = !q || name.includes(q);
-      const matchGender = g === "all" || gender === g;
-
-      return matchSearch && matchGender;
+      return (!q || name.includes(q)) && (g === "all" || gender === g);
     });
   }, [patients, search, filterGender]);
 
@@ -82,8 +99,24 @@ export default function PatientsListPage() {
   // --- Handlers ---
   const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
 
-  // Open/close modal using URL (single source of truth)
-  const openAddModal = () => {
+  // 🔒 BACKEND-DRIVEN add patient
+  const openAddModal = async () => {
+    if (profileBlocked) {
+      showProfileAlert();
+      return;
+    }
+
+    try {
+      // dry-run permission check
+      await api.post("/patients/", {});
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setProfileBlocked(true);
+        showProfileAlert();
+        return;
+      }
+    }
+
     navigate("/patients?add=1", { replace: true });
   };
 
@@ -103,6 +136,7 @@ export default function PatientsListPage() {
         setFilterGender={setFilterGender}
         onRefresh={fetchPatients}
         onAddPatient={openAddModal}
+        addDisabled={profileBlocked} 
       />
 
       {/* Table */}
@@ -116,20 +150,18 @@ export default function PatientsListPage() {
           setFilterGender("all");
         }}
         onAddPatient={openAddModal}
+        addDisabled={profileBlocked} 
       />
 
       {/* Add Patient Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50">
-          {/* overlay */}
           <div
             className="absolute inset-0 bg-black/40"
             onClick={closeAddModal}
           />
 
-          {/* modal */}
           <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-            {/* AddPatientForm already has its own width/bg/shadow */}
             <AddPatientForm onClose={closeAddModal} />
           </div>
         </div>
