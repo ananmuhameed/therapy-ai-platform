@@ -6,3 +6,9 @@ djangorestframework-simplejwt>=5.2
 celery>=5.3
 redis>=5.0
 python-dotenv>=1.0
+
+# ========================
+# TESTING
+# ========================
+pytest>=8.0
+pytest-django>=4.8
