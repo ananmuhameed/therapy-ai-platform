@@ -70,6 +70,7 @@ class SessionAudio(TimeStampedModel):
 
     def __str__(self):
         return f"Audio for Session #{self.session_id}"    
+    
 class SessionTranscript(TimeStampedModel):
     STATUS_CHOICES = [
         ("pending", "Pending"),

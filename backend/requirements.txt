@@ -8,3 +8,6 @@ redis>=5.0
 python-dotenv
 django-storages[s3]
 boto3
+requests
+pytest
+pytest-django

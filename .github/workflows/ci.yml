@@ -9,9 +9,11 @@ jobs:
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: backend
+
     services:
       db:
         image: postgres:16
@@ -44,18 +46,27 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
 
       - name: Install backend dependencies
         run: uv pip install --system -r requirements.txt
 
+      - name: Wait for database
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U ci_user; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
       - name: Run migrations
         run: python manage.py migrate --noinput
 
       - name: Run backend tests
-        run: pytest -q
+        run: |
+          python -m pytest -q
+
 
   frontend:
     name: Frontend Dependency Check

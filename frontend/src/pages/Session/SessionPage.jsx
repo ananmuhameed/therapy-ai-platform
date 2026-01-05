@@ -1,6 +1,16 @@
-import React, { useState, useRef, useEffect } from "react";
-import api from "../../api/axiosInstance";
+import React, { useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { usePatients } from "../../queries/patients";
+import { qk } from "../../queries/queryKeys";
+
 import { useNavigate } from "react-router-dom";
+import api from "../../api/axiosInstance";
+import {
+  sessionAudioUploadSchema,
+  toSessionAudioFormData,
+  mapSessionAudioUploadErrors,
+} from "../../Forms/schemas";
+import { parseServerErrors } from "../../Forms/serverErrors";
 
 // Sub-components
 import PatientSelector from "./PatientSelector";
@@ -13,13 +23,15 @@ import { createRecordingChunkSource, uploadRecordingAudio } from "../../services
 
 
 export default function SessionPage() {
+  const navigate = useNavigate();
+
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const queryClient = useQueryClient();
   const streamRef = useRef(null);
 
   // --- State ---
-  const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
@@ -31,32 +43,8 @@ export default function SessionPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const navigate = useNavigate();
-  
-  // --- Effects ---
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const { data } = await api.get("/patients/");
-        setPatients(Array.isArray(data) ? data : data.results || []);
-      } catch (err) {
-        console.error("Failed to load patients", err);
-      }
-    };
-    fetchPatients();
-  }, []);
-
-  // cleanup mic on unmount
-  useEffect(() => {
-    return () => {
-      try {
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((t) => t.stop());
-          streamRef.current = null;
-        }
-      } catch {}
-    };
-  }, []);
+  // Fetch patients using React Query
+  const { data: patients = [], isLoading: patientsLoading } = usePatients();
 
   // --- Logic ---
   // ✅ Correct flow:
@@ -276,6 +264,7 @@ const startRecording = async () => {
   //   }
   // };
 
+  // Stop recording
   const stopRecording = () => {
     const r = mediaRecorderRef.current;
     if (!r || r.state === "inactive") return;
@@ -284,6 +273,7 @@ const startRecording = async () => {
     } catch {}
   };
 
+  // Pause recording
   const pauseRecording = () => {
     const r = mediaRecorderRef.current;
     if (r && r.state === "recording") {
@@ -294,6 +284,7 @@ const startRecording = async () => {
     }
   };
 
+  // Resume recording
   const resumeRecording = () => {
     const r = mediaRecorderRef.current;
     if (r && r.state === "paused") {
@@ -304,6 +295,7 @@ const startRecording = async () => {
     }
   };
 
+  // Handle file selection for upload
   const onAudioSelected = (e) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // reset input
@@ -321,6 +313,10 @@ const startRecording = async () => {
     handleUploadFile(selectedPatientId, file);
   };
 
+<<<<<<< HEAD
+=======
+  // Open file picker
+>>>>>>> main
   const openFilePicker = () => {
     if (!selectedPatientId) {
       setUploadError("Select a patient first.");
@@ -345,14 +341,22 @@ const startRecording = async () => {
           </span>
         </h1>
 
+<<<<<<< HEAD
         {/* 1. Patient Selector */}
+=======
+        {/* Patient Selector */}
+>>>>>>> main
         <PatientSelector
           patients={patients}
           selectedId={selectedPatientId}
           onChange={setSelectedPatientId}
         />
 
+<<<<<<< HEAD
         {/* 2. Action Buttons */}
+=======
+        {/* Action Buttons */}
+>>>>>>> main
         <SessionActionButtons
           onStart={startRecording}
           onUpload={openFilePicker}
@@ -362,6 +366,7 @@ const startRecording = async () => {
         />
 
         {/* Messages */}
+<<<<<<< HEAD
         {uploadError && <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>}
 
         {uploadSuccess && (
@@ -379,9 +384,28 @@ const startRecording = async () => {
               </button>
             )}
           </div>
+=======
+        {uploadError && (
+          <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>
+>>>>>>> main
         )}
 
-        {/* 3. Recorder UI */}
+        {uploadSuccess && (
+          <div className="mt-2 flex flex-col items-center gap-1">
+            <p className="text-green-600 font-medium text-sm">{uploadSuccess}</p>
+            {lastSessionId && (
+              <button
+                type="button"
+                onClick={() => navigate(`/sessions/${lastSessionId}`)}
+                className="text-xs font-medium text-[#3078E2] hover:underline"
+              >
+                Open saved session
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Recorder UI */}
         {isRecorderVisible && (
           <RecordingInterface
             isRecording={isRecording}
@@ -400,6 +424,7 @@ const startRecording = async () => {
         type="file"
         accept="audio/*"
         className="hidden"
+        disabled={isUploading || patientsLoading}
         onChange={onAudioSelected}
       />
     </div>

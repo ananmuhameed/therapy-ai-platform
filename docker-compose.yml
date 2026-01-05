@@ -1,4 +1,4 @@
-# version: "3.9"
+  # version: "3.9"
 
 services:
   db:
@@ -61,7 +61,7 @@ services:
     command: celery -A core worker -l info --pool=solo --concurrency=1 --prefetch-multiplier=1
     volumes:
       - ./backend:/app
-      - hf_cache:/root/.cache/huggingface
+      - hf_cache:${WHISPER_CACHE_DIR}
     environment:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
@@ -77,6 +77,8 @@ services:
       AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER}
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE}
     depends_on:
       - db
       - redis
@@ -105,7 +107,7 @@ services:
     command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
     ports:
       - "5173:5173"
     depends_on:

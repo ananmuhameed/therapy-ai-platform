@@ -128,6 +128,7 @@ def transcribe_session(self, session_id: int):
             transcript.status = "failed"
             transcript.updated_at = timezone.now()
             transcript.save(update_fields=["status", "updated_at"])
+<<<<<<< HEAD
             TherapySession.objects.filter(id=session_id).update(
             last_error_stage="transcription",
             last_error_message=str(e)[:500],
@@ -135,6 +136,13 @@ def transcribe_session(self, session_id: int):
             updated_at=timezone.now(),
         )
 
+=======
+
+            # reflect failure on session too (UI)
+            session.status = "failed"
+            session.updated_at = timezone.now()
+            session.save(update_fields=["status", "updated_at"])
+>>>>>>> main
             raise
         raise self.retry(exc=e)
     finally:
@@ -148,9 +156,18 @@ def transcribe_session(self, session_id: int):
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def generate_session_report(self, session_id: int):
     """
+<<<<<<< HEAD
     - Business errors (ReportGenerationError): mark failed and STOP (no retry)
     - Unexpected errors: retry; only mark failed on FINAL attempt
     - Keeps status truthful: processing -> completed/failed
+=======
+    - Business errors (ReportGenerationError) => mark failed and STOP (no retry)
+    - Unexpected errors => mark failed and retry
+
+    Also updates TherapySession.status:
+      - completed on success
+      - failed on errors
+>>>>>>> main
     """
     # Ensure a report exists and mark as processing up front
     report, _ = SessionReport.objects.get_or_create(
@@ -179,6 +196,12 @@ def generate_session_report(self, session_id: int):
             updated_at=timezone.now(),
         )
 
+        # report done => session is completed
+        TherapySession.objects.filter(id=session_id).update(
+            status="completed",
+            updated_at=timezone.now(),
+        )
+
         return {"ok": True, "session_id": session_id, "report_id": report.id}
 
     except ReportGenerationError as e:
@@ -187,6 +210,17 @@ def generate_session_report(self, session_id: int):
             status="failed",
             updated_at=timezone.now(),
         )
+<<<<<<< HEAD
+=======
+        SessionReport.objects.filter(session_id=session_id).update(status="failed")
+
+        # reflect failure on session too
+        TherapySession.objects.filter(id=session_id).update(
+            status="failed",
+            updated_at=timezone.now(),
+        )
+
+>>>>>>> main
         return {
             "ok": False,
             "error": "report_generation_error",
@@ -195,7 +229,23 @@ def generate_session_report(self, session_id: int):
         }
 
     except Exception as e:
+<<<<<<< HEAD
         # Unexpected failure: retry; only mark failed on final attempt
+=======
+        # Ensure a report exists, then mark failed and retry
+        SessionReport.objects.get_or_create(
+            session_id=session_id,
+            defaults={"status": "failed", "model_name": "unknown"},
+        )
+        SessionReport.objects.filter(session_id=session_id).update(status="failed")
+
+        # reflect failure on session too (even if we'll retry)
+        TherapySession.objects.filter(id=session_id).update(
+            status="failed",
+            updated_at=timezone.now(),
+        )
+
+>>>>>>> main
         if self.request.retries >= self.max_retries:
             SessionReport.objects.filter(session_id=session_id).update(
                 status="failed",
