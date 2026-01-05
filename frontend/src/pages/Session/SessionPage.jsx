@@ -313,10 +313,7 @@ const startRecording = async () => {
     handleUploadFile(selectedPatientId, file);
   };
 
-<<<<<<< HEAD
-=======
   // Open file picker
->>>>>>> main
   const openFilePicker = () => {
     if (!selectedPatientId) {
       setUploadError("Select a patient first.");
@@ -341,22 +338,14 @@ const startRecording = async () => {
           </span>
         </h1>
 
-<<<<<<< HEAD
-        {/* 1. Patient Selector */}
-=======
         {/* Patient Selector */}
->>>>>>> main
         <PatientSelector
           patients={patients}
           selectedId={selectedPatientId}
           onChange={setSelectedPatientId}
         />
 
-<<<<<<< HEAD
-        {/* 2. Action Buttons */}
-=======
         {/* Action Buttons */}
->>>>>>> main
         <SessionActionButtons
           onStart={startRecording}
           onUpload={openFilePicker}
@@ -366,28 +355,8 @@ const startRecording = async () => {
         />
 
         {/* Messages */}
-<<<<<<< HEAD
-        {uploadError && <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>}
-
-        {uploadSuccess && (
-          <div className="mt-2 flex flex-col items-center gap-1">
-            <p className="text-green-600 font-medium text-sm">{uploadSuccess}</p>
-
-            {/* Optional: user-initiated navigation (NOT automatic) */}
-            {lastSessionId && (
-              <button
-                type="button"
-                onClick={() => (window.location.href = `/sessions/${lastSessionId}`)}
-                className="text-xs font-medium text-[#3078E2] hover:underline"
-              >
-                Open saved session
-              </button>
-            )}
-          </div>
-=======
         {uploadError && (
           <p className="text-red-600 font-medium text-sm mt-2">{uploadError}</p>
->>>>>>> main
         )}
 
         {uploadSuccess && (
