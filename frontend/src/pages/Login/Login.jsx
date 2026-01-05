@@ -100,6 +100,7 @@ export default function Login() {
             onBlur={formik.handleBlur}
             placeholder="you@example.com"
             autoComplete="email"
+            style={{ backgroundColor: "#5B687C", borderColor: "#8C9AB8" }}
           />
           {formik.touched.email && formik.errors.email ? (
             <p className="mt-1 text-sm text-red-500">{formik.errors.email}</p>
@@ -128,7 +129,7 @@ export default function Login() {
           ) : null}
         </div>
 
-        {/* Remember & Forgot */}
+        {/* Remember & Forgot (unchanged) */}
         <div className="flex items-center justify-between">
           <label className="flex items-center cursor-pointer text-[#8D8F8E]">
             <input
@@ -148,7 +149,6 @@ export default function Login() {
           </button>
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={formik.isSubmitting}
@@ -159,6 +159,7 @@ export default function Login() {
         </button>
       </form>
 
+      {/* Rest unchanged */}
       {/* Social login */}
       <div className="flex items-center my-8">
         <div className="flex-grow border-t border-[#5B687C]"></div>
