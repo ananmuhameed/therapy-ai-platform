@@ -6,7 +6,7 @@ import {
   mapPatientFieldErrors,
   toPatientCreatePayload,
 } from "../../Forms/schemas";
-// import { X } from "./react-icons/x"; // Assuming X is an icon for closing the form
+// import { X } from "react-icons/x";
 
 export default function AddPatientForm({ onClose }) {
   const createPatient = useCreatePatient();

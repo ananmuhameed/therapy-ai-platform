@@ -42,6 +42,7 @@ api.interceptors.response.use(
      if (original.url.includes("/auth/login/")) {
       return Promise.reject(err);
     }
+    
     if (err.response?.status === 401 && !original._retry) {
       original._retry = true;
 
