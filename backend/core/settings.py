@@ -96,8 +96,9 @@ REST_FRAMEWORK = {
     ),
 
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/min',
+        'anon': '2/min',
         'user': '100/min',
+        'auth': '5/min', # Custom throttle rate for authentication endpoints
     },
 }
 
