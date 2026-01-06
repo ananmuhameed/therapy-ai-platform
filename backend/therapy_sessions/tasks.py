@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from therapy_sessions.models import TherapySession, SessionTranscript, SessionReport
-from therapy_sessions.services.transcription import get_transcription_service
+from therapy_sessions.services.transcription.whisper import WhisperTranscriptionService
 from therapy_sessions.services.reporting.service import ReportService, ReportGenerationError
 
 import os
@@ -99,8 +99,8 @@ def transcribe_session(self, session_id: int):
     language = getattr(audio, "language_code", None) or "ar"
 
     try:
-        service = get_transcription_service()
-        result = service.transcribe(audio_path=audio_path, language="ar")
+        transcription_service = WhisperTranscriptionService()  # Using the correct service now
+        result = transcription_service.transcribe(audio_path=audio_path, language="ar")
 
         # Ensure commit happens before we enqueue the next task
         with transaction.atomic():

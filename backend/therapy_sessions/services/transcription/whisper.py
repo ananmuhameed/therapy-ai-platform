@@ -1,9 +1,9 @@
 import os
 import re
 from typing import Dict
-import openai
-from django.conf import settings
 
+from django.conf import settings
+from openai import OpenAI
 
 from .base import BaseTranscriptionService, validate_transcription_output
 
@@ -18,34 +18,35 @@ def _basic_clean(text: str) -> str:
 
 
 class WhisperTranscriptionService(BaseTranscriptionService):
-
     def __init__(self):
-        openai.api_key = settings.OPENAI_API_KEY
+        # OpenAI Python SDK v1.x uses a client instance
+        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    def transcribe(self, audio_path: str, language: str = "ar") -> Dict:
+    def transcribe(self, audio_path: str, language: str = "en") -> Dict:
+        """Transcribe the given audio file using OpenAI Whisper."""
         if not audio_path:
             raise ValueError("audio_path is required")
 
-        language = (language or "ar").strip() or "ar"
+        language = (language or "en").strip() or "en"
 
         try:
-            # Open the audio file and send it to OpenAI's API for transcription
-            with open(audio_path, 'rb') as audio_file:
-                response = openai.Audio.transcribe(
-                    model="whisper-1",  # This is the OpenAI Whisper model
+            with open(audio_path, "rb") as audio_file:
+                response = self.client.audio.transcriptions.create(
+                    model="whisper-1",
                     file=audio_file,
-                    language=language
+                    language=language,
                 )
 
-            raw_text = response['text'].strip()
+            # SDK v1.x returns an object, not a dict
+            raw_text = (response.text or "").strip()
             cleaned_text = _basic_clean(raw_text)
 
             result = {
                 "raw_text": raw_text,
                 "cleaned_text": cleaned_text,
-                "language": response.get('language', language),
+                "language": getattr(response, "language", None) or language,
                 "word_count": len(cleaned_text.split()) if cleaned_text else 0,
-                "model_name": "openai-whisper",
+                "model_name": "whisper-1",
             }
 
             validate_transcription_output(result)

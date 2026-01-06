@@ -24,11 +24,12 @@ services:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
 
-  backend:
+  # Django Web Server
+  backend_web:
     env_file:
       - .env
-    build: ./backend  # This uses the single Dockerfile for both web and worker
-    command: ["/app/entrypoint.sh"]  # Start both Django and Celery worker (for the future)
+    build: ./backend
+    command: gunicorn --bind 0.0.0.0:8000 core.wsgi:application  # Gunicorn for Django web server
     volumes:
       - ./backend:/app
     ports:
@@ -39,10 +40,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
-
-      OPENAI_API_KEY: ${OPENAI_API_KEY}  
-
-
+      OPENAI_API_KEY: ${OPENAI_API_KEY}   # OpenAI API key for transcription
       USE_S3: ${USE_S3}
       AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
       AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
@@ -52,47 +50,49 @@ services:
       - db
       - redis
 
-  # Commenting out Celery Worker and Beat for now (will use in future if needed)
-  # celery_worker:
-  #   env_file:
-  #     - .env
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile  # Use the worker Dockerfile if we want to run a separate worker
-  #   command: celery -A core worker -l info
-  #   volumes:
-  #     - ./backend:/app
-  #   environment:
-  #     DB_NAME: ${POSTGRES_DB}
-  #     DB_USER: ${POSTGRES_USER}
-  #     DB_PASSWORD: ${POSTGRES_PASSWORD}
-  #     DB_HOST: ${POSTGRES_HOST}
-  #     DB_PORT: ${POSTGRES_PORT}
-  #     CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-  #     CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
-  #   depends_on:
-  #     - db
-  #     - redis
+  # Celery Worker (Handles Background Tasks)
+  celery_worker:
+    env_file:
+      - .env
+    build:
+      context: ./backend
+      dockerfile: Dockerfile  # Use the worker Dockerfile if we want to run a separate worker
+    command: celery -A core worker -l info  # Celery worker command
+    volumes:
+      - ./backend:/app
+    environment:
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+    depends_on:
+      - db
+      - redis
 
-  # celery_beat:
-  #   env_file:
-  #     - .env
-  #   build: ./backend
-  #   command: celery -A core beat -l info
-  #   volumes:
-  #     - ./backend:/app
-  #   environment:
-  #     DB_NAME: ${POSTGRES_DB}
-  #     DB_USER: ${POSTGRES_USER}
-  #     DB_PASSWORD: ${POSTGRES_PASSWORD}
-  #     DB_HOST: ${POSTGRES_HOST}
-  #     DB_PORT: ${POSTGRES_PORT}
-  #     CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-  #     CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
-  #   depends_on:
-  #     - db
-  #     - redis
+  # Celery Beat (For periodic tasks, e.g., scheduled report generation)
+  celery_beat:
+    env_file:
+      - .env
+    build: ./backend
+    command: celery -A core beat -l info  # Celery Beat command for periodic tasks
+    volumes:
+      - ./backend:/app
+    environment:
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+    depends_on:
+      - db
+      - redis
 
+  # Frontend (Optional, for serving the frontend part of the application)
   frontend:
     build: ./frontend
     command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
@@ -102,7 +102,7 @@ services:
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      - backend_web
 
 volumes:
   postgres_data:
