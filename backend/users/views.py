@@ -10,10 +10,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .utils.google import verify_google_access_token
 from .serializers import GoogleLoginSerializer
 from django.contrib.auth import get_user_model
+from users.throttles import AuthRateThrottle
 
 User = get_user_model()
 class RegisterView(APIView):
-    permission_classes = [AllowAny] 
+    permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -129,6 +131,7 @@ class TherapistProfileView(APIView):
 
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         serializer = GoogleLoginSerializer(data=request.data)
