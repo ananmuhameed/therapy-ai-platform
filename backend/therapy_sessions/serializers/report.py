@@ -1,15 +1,35 @@
 import json
 from rest_framework import serializers
 from therapy_sessions.models import SessionReport
-
+import ast
 
 def _safe_json_load(value, default):
-    if not value:
+    if value is None or value == "":
         return default
-    try:
-        return json.loads(value)
-    except Exception:
-        return default
+
+    # already a python object
+    if isinstance(value, (list, dict)):
+        return value
+
+    if isinstance(value, str):
+        s = value.strip()
+
+        # try real JSON first
+        try:
+            return json.loads(s)
+        except Exception:
+            pass
+
+        # fallback: parse python literals like "['a', 'b']" or "[{'x': 1}]"
+        try:
+            parsed = ast.literal_eval(s)
+            if isinstance(parsed, (list, dict)):
+                return parsed
+        except Exception:
+            pass
+
+    return default
+
 
 
 class SessionReportSerializer(serializers.ModelSerializer):
