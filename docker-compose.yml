@@ -1,4 +1,4 @@
-  # version: "3.9"
+version: "3.9"
 
 services:
   db:
@@ -27,8 +27,8 @@ services:
   backend:
     env_file:
       - .env
-    build: ./backend
-    command: ["/app/entrypoint.sh"]
+    build: ./backend  # This uses the single Dockerfile for both web and worker
+    command: ["/app/entrypoint.sh"]  # Start both Django and Celery worker (for the future)
     volumes:
       - ./backend:/app
     ports:
@@ -40,8 +40,8 @@ services:
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
 
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}  
+
 
       USE_S3: ${USE_S3}
       AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
@@ -52,55 +52,46 @@ services:
       - db
       - redis
 
-  celery_worker:
-    env_file:
-      - .env
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.worker
-    command: celery -A core worker -l info --pool=solo --concurrency=1 --prefetch-multiplier=1
-    volumes:
-      - ./backend:/app
-      - hf_cache:${WHISPER_CACHE_DIR}
-    environment:
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_HOST: ${POSTGRES_HOST}
-      DB_PORT: ${POSTGRES_PORT}
-    
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
-      
-      USE_S3: ${USE_S3}
-      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
-      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER}
-      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE}
-    depends_on:
-      - db
-      - redis
+  # Commenting out Celery Worker and Beat for now (will use in future if needed)
+  # celery_worker:
+  #   env_file:
+  #     - .env
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile  # Use the worker Dockerfile if we want to run a separate worker
+  #   command: celery -A core worker -l info
+  #   volumes:
+  #     - ./backend:/app
+  #   environment:
+  #     DB_NAME: ${POSTGRES_DB}
+  #     DB_USER: ${POSTGRES_USER}
+  #     DB_PASSWORD: ${POSTGRES_PASSWORD}
+  #     DB_HOST: ${POSTGRES_HOST}
+  #     DB_PORT: ${POSTGRES_PORT}
+  #     CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+  #     CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+  #   depends_on:
+  #     - db
+  #     - redis
 
-  celery_beat:
-    env_file:
-      - .env
-    build: ./backend
-    command: celery -A core beat -l info
-    volumes:
-      - ./backend:/app
-    environment:
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_HOST: ${POSTGRES_HOST}
-      DB_PORT: ${POSTGRES_PORT}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
-    depends_on:
-      - db
-      - redis
+  # celery_beat:
+  #   env_file:
+  #     - .env
+  #   build: ./backend
+  #   command: celery -A core beat -l info
+  #   volumes:
+  #     - ./backend:/app
+  #   environment:
+  #     DB_NAME: ${POSTGRES_DB}
+  #     DB_USER: ${POSTGRES_USER}
+  #     DB_PASSWORD: ${POSTGRES_PASSWORD}
+  #     DB_HOST: ${POSTGRES_HOST}
+  #     DB_PORT: ${POSTGRES_PORT}
+  #     CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+  #     CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
+  #   depends_on:
+  #     - db
+  #     - redis
 
   frontend:
     build: ./frontend
