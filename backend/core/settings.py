@@ -96,9 +96,10 @@ REST_FRAMEWORK = {
     ),
 
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '2/min',
+        'anon': '20/min',
         'user': '100/min',
         'auth': '5/min', # Custom throttle rate for authentication endpoints
+        'upload_audio': '2/min', # Custom throttle rate for audio uploads
     },
 }
 
