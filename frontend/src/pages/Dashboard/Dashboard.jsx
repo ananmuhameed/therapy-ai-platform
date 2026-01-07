@@ -15,7 +15,6 @@ export default function Dashboard() {
 
   const [user, setUser] = useState(null);
 
-  // ✅ match backend keys
   const [stats, setStats] = useState({
     patients_count: 0,
     sessions_this_week: 0,
@@ -93,6 +92,21 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [navigate]);
 
+  const sessionsThisWeekClient = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+
+    // Monday as start of week
+    const day = (start.getDay() + 6) % 7; // Mon=0 ... Sun=6
+    start.setDate(start.getDate() - day);
+    start.setHours(0, 0, 0, 0);
+
+    return sessions.filter((s) => {
+      const dt = s?.created_at;
+      return dt && new Date(dt) >= start;
+    }).length;
+  }, [sessions]);
+
   const recentSessionsFormatted = useMemo(() => {
     const pMap = new Map();
     patients.forEach((p) =>
@@ -100,18 +114,16 @@ export default function Dashboard() {
     );
 
     return [...sessions]
-      // ✅ true "recent" should prefer created_at, fallback session_date
       .sort(
         (a, b) =>
           new Date(b.created_at || b.session_date || 0) -
           new Date(a.created_at || a.session_date || 0)
       )
-      .slice(0, 3)
+      .slice(0, 5)
       .map((s, i) => ({
         id: s.id,
         indexLabel: `${i + 1}`,
         name: pMap.get(s.patient) || (s.patient ? `Patient #${s.patient}` : "—"),
-        // ✅ matches your recent table "Created" column expectation
         created_at: s.created_at || s.session_date || null,
         status: s.status,
       }));
@@ -127,12 +139,16 @@ export default function Dashboard() {
   return (
     <div className="p-10 space-y-8 relative">
       <h1 style={{ fontSize: 32, color: "#727473" }} className="font-semibold">
-        Therapist Dashboard
+        Welcome{user?.first_name ? `, ${user.first_name.charAt(0).toUpperCase()}${user.first_name.slice(1)}` : ""}
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatBox icon={<FiUsers size={22} />} label="Patients" value={stats.patients_count} />
-        <StatBox icon={<FiMic size={22} />} label="Sessions this week" value={stats.sessions_this_week} />
+        <StatBox
+          icon={<FiMic size={22} />}
+          label="Sessions this week"
+          value={sessionsThisWeekClient}
+        />
         <StatBox
           icon={<FiFileText size={22} />}
           label="Reports Ready (this week)"
@@ -161,13 +177,17 @@ export default function Dashboard() {
       />
 
       {showAddPatient && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="absolute inset-0" onClick={() => setShowAddPatient(false)} />
-          <div className="relative z-10 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowAddPatient(false)}
+          />
+          <div className="relative z-10 flex min-h-full items-center justify-center p-4">
             <AddPatientForm onClose={handlePatientAdded} />
           </div>
         </div>
       )}
+
     </div>
   );
 }
