@@ -1,13 +1,12 @@
 // src/components/Waveform.jsx
 import React, { useEffect, useRef } from "react";
 
-const Waveform = ({ active, paused }) => {
+const Waveform = ({ active, paused, stream }) => {
     const canvasRef = useRef(null);
 
     const audioCtxRef = useRef(null);
     const analyserRef = useRef(null);
     const sourceRef = useRef(null);
-    const streamRef = useRef(null);
 
     const rafRef = useRef(null);
 
@@ -83,22 +82,20 @@ const Waveform = ({ active, paused }) => {
             return;
         }
 
-        // first start
-        if (!audioCtxRef.current) {
-            startMic();
-            return;
-        }
+        // wait until stream exists
+        if (!stream) return;
 
-        // active: handle pause/resume without resetting bars
+        // ✅ init only once
+        if (!audioCtxRef.current) startMic(stream);
+
         if (paused) pauseRAF();
         else resumeRAF();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [active, paused]);
+    }, [active, paused, stream]);
 
-    const startMic = async () => {
+    const startMic = async (stream) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
+            if (!stream) return;
 
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             audioCtxRef.current = ctx;
@@ -318,12 +315,10 @@ const Waveform = ({ active, paused }) => {
 
         sourceRef.current?.disconnect();
         analyserRef.current?.disconnect();
-        streamRef.current?.getTracks().forEach((t) => t.stop());
         audioCtxRef.current?.close().catch(() => { });
 
         sourceRef.current = null;
         analyserRef.current = null;
-        streamRef.current = null;
         audioCtxRef.current = null;
 
         // clear refs

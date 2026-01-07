@@ -32,7 +32,7 @@ class OpenAIReportProvider(BaseReportProvider):
         *,
         transcript_text: str,
         session_context: Optional[Dict[str, Any]] = None,
-        language: str = "en",
+        language: str = "ar",
     ) -> GeneratedReport:
 
         if not transcript_text.strip():

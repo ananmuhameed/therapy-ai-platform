@@ -32,11 +32,11 @@ class WhisperTranscriptionService(BaseTranscriptionService):
         self._client = OpenAI(api_key=api_key)
         return self._client
 
-    def transcribe(self, audio_path: str, language: str = "en") -> Dict:
+    def transcribe(self, audio_path: str, language: str = "ar") -> Dict:
         if not audio_path:
             raise ValueError("audio_path is required")
 
-        language = (language or "en").strip() or "en"
+        language = (language or "ar").strip() or "ar"
 
         client = self._get_client()
 
@@ -44,7 +44,14 @@ class WhisperTranscriptionService(BaseTranscriptionService):
             response = client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
-                language=language,
+                language="ar",
+                prompt=(
+                    "اكتب التفريغ حرفيًا بالعربية فقط. "
+                    "لا تستخدم الإنجليزية ولا الحروف اللاتينية. "
+                    "الأسماء الأجنبية اكتبها بالعربية إن أمكن."
+                ),
+                temperature=0,
+                response_format="verbose_json",
             )
 
         raw_text = (response.text or "").strip()
