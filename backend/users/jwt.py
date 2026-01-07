@@ -36,21 +36,32 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        # Adjust these fields to match your login payload
         email = request.data.get("email")
         password = request.data.get("password")
 
-        # If your USERNAME_FIELD is email, this is fine.
         user = authenticate(request, username=email, password=password)
         if not user:
-            return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "Invalid credentials"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not user.is_verified:
+            return Response(
+                {"detail": "Please verify your email before logging in."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         refresh = RefreshToken.for_user(user)
         access = str(refresh.access_token)
 
-        resp = Response({"access": access, "user": UserPublicSerializer(user).data}, status=status.HTTP_200_OK)
+        resp = Response(
+            {"access": access, "user": UserPublicSerializer(user).data},
+            status=status.HTTP_200_OK,
+        )
         set_refresh_cookie(resp, str(refresh))
         return resp
+
 
 class CookieTokenRefreshView(TokenRefreshView):
     permission_classes = [AllowAny]

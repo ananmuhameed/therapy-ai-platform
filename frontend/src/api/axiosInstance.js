@@ -1,86 +1,75 @@
 import axios from "axios";
-import { getAccessToken, setAccessToken, clearAccessToken, clearAuth } from "../auth/storage";
+import { getAccessToken, setAccessToken, clearAuth } from "../auth/storage";
 import { redirectToLogin } from "../auth/navigation";
 
-//axios instance
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1",
-  withCredentials: true, // sends HttpOnly cookies
-});
-
-const raw = axios.create({
+export const raw = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1",
   withCredentials: true,
 });
 
-//JWT interceptor
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1",
+  withCredentials: true,
+});
+
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
-},
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+});
 
 let isRefreshing = false;
 let queue = [];
 
-function resolveQueue(err, token = null) {
-  queue.forEach(({ resolve, reject }) => (err ? reject(err) : resolve(token)));
+function resolveQueue(error, token = null) {
+  queue.forEach(p => (error ? p.reject(error) : p.resolve(token)));
   queue = [];
 }
 
 api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const original = err.config;
-     if (original.url.includes("/auth/login/")) {
-      return Promise.reject(err);
+  res => res,
+  async error => {
+    const original = error.config;
+
+    //  NEVER refresh on public endpoints
+    if (PUBLIC_ENDPOINTS.some(p => original.url.includes(p))) {
+  return Promise.reject(error);
     }
-    
-    if (err.response?.status === 401 && !original._retry) {
+
+    if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
 
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) =>
           queue.push({
-            resolve: (token) => {
-              original.headers = original.headers || {};
+            resolve: token => {
               original.headers.Authorization = `Bearer ${token}`;
               resolve(api(original));
             },
             reject,
-          });
-        });
+          })
+        );
       }
 
       isRefreshing = true;
+
       try {
-        const r = await raw.post("/auth/token/refresh/");
-        const newAccess = r.data.access;
-
-        setAccessToken(newAccess);
-        resolveQueue(null, newAccess);
-
-        original.headers = original.headers || {};
-        original.headers.Authorization = `Bearer ${newAccess}`;
+        const res = await raw.post("/auth/token/refresh/");
+        setAccessToken(res.data.access);
+        resolveQueue(null, res.data.access);
+        original.headers.Authorization = `Bearer ${res.data.access}`;
         return api(original);
-      } catch (refreshErr) {
-        resolveQueue(refreshErr, null);
+      } catch (e) {
+        resolveQueue(e);
         clearAuth();
         redirectToLogin();
-        return Promise.reject(refreshErr);
+        return Promise.reject(e);
       } finally {
         isRefreshing = false;
       }
     }
 
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 
