@@ -45,13 +45,6 @@ class WhisperTranscriptionService(BaseTranscriptionService):
                 model="whisper-1",
                 file=audio_file,
                 language="ar",
-                prompt=(
-                    "اكتب التفريغ حرفيًا بالعربية فقط. "
-                    "لا تستخدم الإنجليزية ولا الحروف اللاتينية. "
-                    "الأسماء الأجنبية اكتبها بالعربية إن أمكن."
-                ),
-                temperature=0,
-                response_format="verbose_json",
             )
 
         raw_text = (response.text or "").strip()

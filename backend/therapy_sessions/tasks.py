@@ -48,11 +48,20 @@ def transcribe_session(self, session_id: int):
 
     if transcript.status == "completed":
         report = SessionReport.objects.filter(session=session).only("status").first()
-        desired = "completed" if (report and report.status == "completed") else "analyzing"
-        if session.status != desired:
-            session.status = desired
-            session.updated_at = timezone.now()
-            session.save(update_fields=["status", "updated_at"])
+
+        # if transcript done but report missing / not completed -> enqueue report generation
+        if not report or report.status != "completed":
+            if session.status != "analyzing":
+                session.status = "analyzing"
+                session.updated_at = timezone.now()
+                session.save(update_fields=["status", "updated_at"])
+            transaction.on_commit(lambda: generate_session_report.delay(session_id))
+        else:
+            if session.status != "completed":
+                session.status = "completed"
+                session.updated_at = timezone.now()
+                session.save(update_fields=["status", "updated_at"])
+
         return {
             "ok": True,
             "skipped": True,
@@ -60,6 +69,7 @@ def transcribe_session(self, session_id: int):
             "session_id": session_id,
             "transcript_id": transcript.id,
         }
+
 
     if transcript.status != "transcribing":
         transcript.status = "transcribing"
@@ -97,7 +107,7 @@ def transcribe_session(self, session_id: int):
             transcript.updated_at = timezone.now()
             transcript.save()
 
-            session.status = "analyzing"
+            session.status = "transcribed"
             session.updated_at = timezone.now()
             session.save(update_fields=["status", "updated_at"])
 
@@ -147,11 +157,14 @@ def generate_session_report(self, session_id: int):
         defaults={"status": "processing", "model_name": "unknown"},
     )
 
-    if report.status != "processing":
-        SessionReport.objects.filter(session_id=session_id).update(
-            status="processing",
-            updated_at=timezone.now(),
-        )
+    SessionReport.objects.filter(
+        session_id=session_id,
+        status__in=["draft", "failed"],  # allow rerun only from these
+    ).update(
+        status="processing",
+        updated_at=timezone.now(),
+    )
+
 
     try:
         report = ReportService.generate_for_session(session_id)
