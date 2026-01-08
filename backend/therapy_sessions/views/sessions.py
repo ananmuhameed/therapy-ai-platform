@@ -21,6 +21,10 @@ from therapy_sessions.services.s3.s3_client import s3_client, s3_bucket
 from therapy_sessions.services.s3.storage_key import session_audio_key 
 from django.http import FileResponse, Http404
 from therapy_sessions.services.reporting.pdf import generate_report_pdf
+from therapy_sessions.serializers.report import (
+    SessionReportSerializer,
+    SessionReportUpdateSerializer,
+)
 
 
 MULTIPART_PART_SIZE = 10 * 1024 * 1024  # 10 MB

@@ -40,11 +40,15 @@
   </ul>
 
   <h2>Risk Flags</h2>
+ {% if risk_flags %}
   <ul>
     {% for flag in risk_flags %}
       <li>{{ flag.type }} ({{ flag.severity }}): {{ flag.note }}</li>
     {% endfor %}
   </ul>
+{% else %}
+  <p>No risk flags identified.</p>
+{% endif %}
 
   <h2>Treatment Plan</h2>
   <ul>

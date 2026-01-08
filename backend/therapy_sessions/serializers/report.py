@@ -65,4 +65,8 @@ class SessionReportUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "generated_summary",
             "therapist_notes",
+            "key_points",
+            "risk_flags",
+            "treatment_plan",
+            "therapist_notes",
         ]
