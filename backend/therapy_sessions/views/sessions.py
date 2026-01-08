@@ -27,6 +27,7 @@ from therapy_sessions.serializers.report import (
 )
 
 
+
 MULTIPART_PART_SIZE = 10 * 1024 * 1024  # 10 MB
 class TherapySessionViewSet(viewsets.ModelViewSet):
     serializer_class = TherapySessionSerializer
@@ -95,6 +96,30 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             {"detail": "Upload successful. Transcription started.", "audio_id": audio.id},
             status=status.HTTP_201_CREATED,
         )
+    @action(detail=True, methods=["get"], url_path="audio/play")
+    def play_audio(self, request, pk=None):
+        session = self.get_object()
+
+        audio = getattr(session, "audio", None)
+        if not audio or not audio.audio_file:
+            return Response(
+                {"detail": "No audio available for this session."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        s3 = s3_client()
+
+        url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": s3_bucket(),
+                "Key": str(audio.audio_file),
+            },
+            ExpiresIn=60 * 60,  # 1 hour
+        )
+
+        return Response({"url": url})
+
 
     @action(detail=True, methods=["post"], url_path="replace-audio")
     def replace_audio(self, request, pk=None):
