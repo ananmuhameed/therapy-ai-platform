@@ -19,7 +19,7 @@ services:
     image: redis:7-alpine
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
@@ -57,7 +57,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile  # Use the worker Dockerfile if we want to run a separate worker
-    command: celery -A core worker -l info  --pool=solo  concurrency=1  prefetch-multiplier=1
+    command: celery -A core worker --loglevel=info --pool=solo --concurrency=1 --prefetch-multiplier=1
     volumes:
       - ./backend:/app
     environment:

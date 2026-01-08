@@ -121,9 +121,12 @@ class SessionReport(TimeStampedModel):
     )
 
     generated_summary = models.TextField(blank=True)
-    key_points = models.TextField(blank=True)
-    risk_flags = models.TextField(blank=True)
-    treatment_plan = models.TextField(blank=True)
+
+    # ✅ FINAL JSON FIELDS
+    key_points = models.JSONField(default=list, blank=True)
+    risk_flags = models.JSONField(default=list, blank=True)
+    treatment_plan = models.JSONField(default=list, blank=True)
+
     therapist_notes = models.TextField(blank=True)
 
     status = models.CharField(
@@ -139,7 +142,7 @@ class SessionReport(TimeStampedModel):
 
     def __str__(self):
         return f"Report | Session #{self.session_id} | {self.status}"
-
+    
 class SessionAudioUpload(TimeStampedModel):
     session = models.OneToOneField(
         TherapySession,

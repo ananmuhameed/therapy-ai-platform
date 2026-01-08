@@ -22,3 +22,6 @@ pytest-django>=4.8
 # ========================
 ffmpeg  # Required for audio processing
 openai  # Required for Whisper API integration
+
+WeasyPrint==61.2
+pydyf==0.10.0

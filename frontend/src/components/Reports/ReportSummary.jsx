@@ -1,106 +1,110 @@
-import React from 'react';
-import { FileText, AlertTriangle, CheckCircle, Activity } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { FileText, AlertTriangle, CheckCircle, Activity, Save, X } from "lucide-react";
+import api from "../../api/axiosInstance";
 
 const ReportSummary = ({ report }) => {
-  if (!report) return null;
+  const [summary, setSummary] = useState("");
+  const [originalSummary, setOriginalSummary] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Helper to ensure we render lists correctly 
-  // Helper to ensure we render lists correctly
-  const renderList = (data) => {
-    if (!data) return <p className="text-gray-400 text-sm italic">None detected</p>;
+  useEffect(() => {
+    if (report?.generated_summary) {
+      setSummary(report.generated_summary);
+      setOriginalSummary(report.generated_summary);
+    }
+  }, [report]);
 
-    const items = Array.isArray(data) ? data : [];
-    if (items.length === 0) return <p className="text-gray-400 text-sm italic">None detected</p>;
+  const saveSummary = async () => {
+    setIsSaving(true);
+    await api.patch(`/sessions/${report.session}/report/`, {
+      generated_summary: summary,
+    });
+    setOriginalSummary(summary);
+    setIsEditing(false);
+    setIsSaving(false);
+  };
+
+  const renderList = (items) => {
+    if (!items || items.length === 0)
+      return <p className="text-gray-400 text-sm italic">None detected</p>;
 
     return (
       <ul className="list-disc list-inside space-y-1">
-        {items.map((item, idx) => {
-          // If item is an object (e.g., risk flag), render its fields
-          if (item && typeof item === "object") {
-            const type = item.type ?? "risk";
-            const severity = item.severity ?? "unknown";
-            const note = item.note ?? "";
-
-            return (
-              <li key={idx} className="text-gray-700 text-sm">
-                <span className="font-semibold">{String(type)}</span>
-                {" "}
-                <span className="uppercase text-xs font-bold">
-                  ({String(severity)})
-                </span>
-                {note ? `: ${String(note)}` : ""}
-              </li>
-            );
-          }
-
-          // Otherwise render as string
-          return (
-            <li key={idx} className="text-gray-700 text-sm">
-              {String(item)}
-            </li>
-          );
-        })}
+        {items.map((item, idx) => (
+          <li key={idx} className="text-gray-700 text-sm">
+            {typeof item === "object"
+              ? `${item.type} (${item.severity}): ${item.note || ""}`
+              : item}
+          </li>
+        ))}
       </ul>
     );
   };
 
-
   return (
-    <div className="w-full max-w-4xl mx-auto mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="bg-blue-50/50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-            <Activity size={18} />
+    <div className="bg-white rounded-xl shadow-sm border p-6 space-y-6">
+      <h2 className="font-semibold flex items-center gap-2">
+        <Activity size={18} /> Clinical AI Summary
+      </h2>
+
+      {/* EDITABLE SUMMARY */}
+      <div>
+        <h3 className="text-xs font-bold text-gray-400 uppercase mb-2">
+          Executive Summary
+        </h3>
+
+        <textarea
+          value={summary}
+          onChange={(e) => {
+            setSummary(e.target.value);
+            setIsEditing(true);
+          }}
+          rows={5}
+          className="w-full bg-gray-50 p-4 rounded border"
+        />
+
+        {isEditing && (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={saveSummary}
+              disabled={isSaving}
+              className="flex items-center gap-1 bg-blue-600 text-white px-3 py-1 rounded text-xs"
+            >
+              <Save size={14} /> Save
+            </button>
+            <button
+              onClick={() => {
+                setSummary(originalSummary);
+                setIsEditing(false);
+              }}
+              className="flex items-center gap-1 bg-gray-200 px-3 py-1 rounded text-xs"
+            >
+              <X size={14} /> Cancel
+            </button>
           </div>
-          <h2 className="font-semibold text-gray-800">Clinical AI Summary</h2>
-        </div>
-        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${report.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-          {report.status}
-        </span>
+        )}
       </div>
 
-      <div className="p-6 grid gap-6">
-        {/* Generated Summary */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-            <FileText size={14} /> Executive Summary
+      <div className="grid md:grid-cols-2 gap-6">
+        <div>
+          <h3 className="text-xs font-bold uppercase mb-2 flex items-center gap-1">
+            <CheckCircle size={14} /> Key Points
           </h3>
-          <p className="text-gray-700 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-100">
-            {report.generated_summary || "No summary generated yet."}
-          </p>
+          {renderList(report.key_points)}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Key Points */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-              <CheckCircle size={14} /> Key Points
-            </h3>
-            <div className="bg-white p-4 rounded-lg border border-gray-100 h-full">
-              {renderList(report.key_points)}
-            </div>
-          </div>
-
-          {/* Risk Flags */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-2">
-              <AlertTriangle size={14} /> Risk Flags
-            </h3>
-            <div className="bg-red-50/30 p-4 rounded-lg border border-red-100 h-full">
-              {renderList(report.risk_flags)}
-            </div>
-          </div>
-        </div>
-
-        {/* Treatment Plan */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-            Suggested Treatment Plan
+        <div>
+          <h3 className="text-xs font-bold uppercase mb-2 flex items-center gap-1 text-red-500">
+            <AlertTriangle size={14} /> Risk Flags
           </h3>
-          <div className="bg-blue-50/30 p-4 rounded-lg border border-blue-100">
-            {renderList(report.treatment_plan)}
-          </div>
+          {renderList(report.risk_flags)}
         </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-bold uppercase mb-2">Treatment Plan</h3>
+        {renderList(report.treatment_plan)}
       </div>
     </div>
   );
