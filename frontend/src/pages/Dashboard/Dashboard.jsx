@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
-import { getUser, getAccessToken, clearAuth } from "../../auth/storage";
+import { getAccessToken, clearAuth } from "../../auth/storage";
 import { FiUsers, FiMic, FiFileText, FiPlus } from "react-icons/fi";
-import { formatDate } from "../../utils/helpers";
+import Swal from "sweetalert2";
 
 import StatBox from "./StatBox";
 import RecentSessionsTable from "./RecentSessionsTable";
@@ -13,83 +13,102 @@ import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [profileBlocked, setProfileBlocked] = useState(false); 
 
   const [stats, setStats] = useState({
     patients_count: 0,
     sessions_this_week: 0,
     reports_ready_this_week: 0,
   });
-
   const [sessions, setSessions] = useState([]);
   const [patients, setPatients] = useState([]);
-
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [sessionsError, setSessionsError] = useState("");
-
   const [showAddPatient, setShowAddPatient] = useState(false);
 
-  const fetchDashboardData = () => {
-    // Stats
-    api
-      .get("/dashboard/")
-      .then(({ data }) => {
-        setStats({
-          patients_count: data?.patients_count ?? 0,
-          sessions_this_week: data?.sessions_this_week ?? 0,
-          reports_ready_this_week: data?.reports_ready_this_week ?? 0,
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-        setStats({
-          patients_count: 0,
-          sessions_this_week: 0,
-          reports_ready_this_week: 0,
-        });
-      });
-
-    // Sessions + Patients for recent table
-    setSessionsLoading(true);
-    setSessionsError("");
-
-    Promise.all([api.get("/sessions/"), api.get("/patients/")])
-      .then(([sRes, pRes]) => {
-        const sList = Array.isArray(sRes.data) ? sRes.data : sRes.data?.results || [];
-        const pList = Array.isArray(pRes.data) ? pRes.data : pRes.data?.results || [];
-        setSessions(sList);
-        setPatients(pList);
-      })
-      .catch((err) => {
-        console.error(err);
-        setSessionsError("Failed to load sessions");
-        setSessions([]);
-        setPatients([]);
-      })
-      .finally(() => setSessionsLoading(false));
+  // ---- Alert ----
+  const handlePermissionError = () => {
+    Swal.fire({
+      icon: "warning",
+      iconColor: "#3078E2",
+      title: "Profile incomplete",
+      text: "Please complete your profile first.",
+      showCancelButton: true,
+      confirmButtonText: "Go to profile",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#3078E2",
+      customClass: {
+        popup: "rounded-2xl",
+        confirmButton: "rounded-2xl",
+        cancelButton: "rounded-2xl",
+      },
+    }).then((res) => {
+      if (res.isConfirmed) {
+        navigate("/therapistprofile");
+      }
+    });
   };
 
+  // ---- Actions ----
+  const openAddPatient = async () => {
+    if (profileBlocked) {
+      handlePermissionError();
+      return;
+    }
+
+    try {
+      await api.post("/patients/", {}); // backend permission check
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setProfileBlocked(true);
+        handlePermissionError();
+        return;
+      }
+    }
+
+    setShowAddPatient(true);
+  };
+
+  const startNewSession = async () => {
+    if (profileBlocked) {
+      handlePermissionError();
+      return;
+    }
+
+    try {
+      await api.post("/sessions/", {}); // backend permission check
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setProfileBlocked(true);
+        handlePermissionError();
+        return;
+      }
+    }
+
+    navigate("/sessions/new");
+  };
+
+  // ---- Load dashboard ----
   useEffect(() => {
     if (!getAccessToken()) {
       navigate("/login", { replace: true });
       return;
     }
 
-    const cached = getUser();
-    if (cached) setUser(cached);
-
-    api
-      .get("/auth/me/")
-      .then(({ data }) => {
-        setUser(data);
-        localStorage.setItem("user", JSON.stringify(data));
+    Promise.all([
+      api.get("/dashboard/"),
+      api.get("/sessions/"),
+      api.get("/patients/"),
+    ])
+      .then(([d, s, p]) => {
+        setStats(d.data);
+        setSessions(s.data || []);
+        setPatients(p.data || []);
+        setUserLoaded(true);
       })
       .catch(() => {
         clearAuth();
         navigate("/login");
       });
-
-    fetchDashboardData();
   }, [navigate]);
 
   const sessionsThisWeekClient = useMemo(() => {
@@ -109,9 +128,7 @@ export default function Dashboard() {
 
   const recentSessionsFormatted = useMemo(() => {
     const pMap = new Map();
-    patients.forEach((p) =>
-      pMap.set(p.id, p.full_name || p.name || `Patient #${p.id}`)
-    );
+    patients.forEach((p) => pMap.set(p.id, p.full_name));
 
     return [...sessions]
       .sort(
@@ -129,12 +146,7 @@ export default function Dashboard() {
       }));
   }, [sessions, patients]);
 
-  const handlePatientAdded = () => {
-    setShowAddPatient(false);
-    fetchDashboardData();
-  };
-
-  if (!user) return <div className="p-8"><h2>Loading...</h2></div>;
+  if (!userLoaded) return <div>Loading...</div>;
 
   return (
     <div className="p-10 space-y-8 relative">
@@ -156,22 +168,24 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="flex gap-4 items-center">
-        <GradientButton onClick={() => setShowAddPatient(true)}>
-          <FiPlus size={18} /> Add Patient
+      <div className="flex gap-4">
+        <GradientButton
+          disabled={profileBlocked}
+          onClick={openAddPatient}
+        >
+          <FiPlus /> Add Patient
         </GradientButton>
 
-        <Link to="/sessions/new" className="no-underline">
-          <GradientButton>
-            <FiMic size={18} /> New Session
-          </GradientButton>
-        </Link>
+        <GradientButton
+          disabled={profileBlocked}
+          onClick={startNewSession}
+        >
+          <FiMic /> New Session
+        </GradientButton>
       </div>
 
       <RecentSessionsTable
         sessions={recentSessionsFormatted}
-        loading={sessionsLoading}
-        error={sessionsError}
         onViewAll={() => navigate("/sessions")}
         onRowClick={(id) => navigate(`/sessions/${id}`)}
       />
