@@ -12,6 +12,7 @@ import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
 
   const [userLoaded, setUserLoaded] = useState(false);
   const [profileBlocked, setProfileBlocked] = useState(false); 
