@@ -1,15 +1,22 @@
+import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import TherapistProfile
-
+from django.contrib.auth import authenticate
 from .serializers import RegisterSerializer, TherapistProfileUpdateSerializer, UserPublicSerializer,TherapistProfileSerializer
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from .utils.google import verify_google_access_token
 from .serializers import GoogleLoginSerializer
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
+from .models import EmailVerification
+from .tasks import send_verification_email
+from rest_framework.permissions import AllowAny
+from django.shortcuts import get_object_or_404
 
 User = get_user_model()
 class RegisterView(APIView):
@@ -21,6 +28,15 @@ class RegisterView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
+        verification = EmailVerification.objects.create(
+        user=user,
+        expires_at=timezone.now() + timedelta(minutes=25),
+        )
+
+        send_verification_email.delay(
+         user.email,
+         str(verification.token),
+         )
 
         return Response(
             {
@@ -180,3 +196,77 @@ class GoogleLoginView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+ # =========================
+# VERIFY EMAIL
+# =========================
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("token")
+
+        verification = get_object_or_404(
+            EmailVerification,
+            token=token,
+            used=False,
+            expires_at__gt=timezone.now()
+        )
+
+        user = verification.user
+        user.is_verified = True
+        user.save()
+
+        verification.used = True
+        verification.save()
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "access": str(refresh.access_token),
+            "user": UserPublicSerializer(user).data,
+        })
+# =========================
+# RESEND VERIFICATION
+# =========================
+class ResendVerificationView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response(
+                {"email": "Email is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"email": "User not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if user.is_verified:
+            return Response(
+                {"detail": "Email already verified"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        verification, _ = EmailVerification.objects.update_or_create(
+            user=user,
+            defaults={
+                "token": uuid.uuid4(),
+                "expires_at": timezone.now() + timedelta(minutes=30),
+                "used": False,
+            },
+        )
+
+        send_verification_email.delay(user.email, verification.token)
+
+        return Response(
+            {"detail": "Verification email resent"},
+            status=status.HTTP_200_OK,
+        )
+
+

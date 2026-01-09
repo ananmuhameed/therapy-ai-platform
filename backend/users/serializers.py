@@ -46,7 +46,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         # full_name="Dr. Jane Doe",)
 
         # Uses your UserManager => hashes password + normalizes email
-        user = User.objects.create_user(password=password, **validated_data)
+        user = User.objects.create_user(
+         password=password,
+         is_verified=False,
+         **validated_data
+      )
+
         # Auto-create therapist profile on registration
         TherapistProfile.objects.get_or_create(user=user)
         return user

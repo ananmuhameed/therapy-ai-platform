@@ -56,7 +56,11 @@ class SessionAudio(TimeStampedModel):
         on_delete=models.CASCADE, # when session is deleted, delete audio too
         related_name="audio", # one-to-one relationship when c
     )
-    audio_file = models.FileField(upload_to="recordings/") # path to the file
+
+    def session_audio_path(instance, filename):
+        return f"recordings/patient_{instance.session.patient_id}/session_{instance.session.id}/{filename}"
+    
+    audio_file = models.FileField(upload_to=session_audio_path) # path to the file
     original_filename = models.CharField(max_length=255) # original file name uploaded
     
     duration_seconds = models.PositiveIntegerField(null=True, blank=True) # in seconds
@@ -136,3 +140,15 @@ class SessionReport(TimeStampedModel):
     def __str__(self):
         return f"Report | Session #{self.session_id} | {self.status}"
 
+class SessionAudioUpload(TimeStampedModel):
+    session = models.OneToOneField(
+        TherapySession,
+        on_delete=models.CASCADE, # when session is deleted, delete audio upload too
+        related_name="audio_upload", # one-to-one relationship
+    )
+    s3_key=models.CharField(max_length=1024) # S3 object key
+    upload_id = models.CharField(max_length=255) # multipart upload ID
+    status = models.CharField(max_length=32, default="uploading") # uploading, completed, aborted, failed
+
+    def __str__(self):
+        return f"Multipart Upload for Session #{self.session_id} | Status: {self.status}"
