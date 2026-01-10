@@ -26,7 +26,7 @@ export default function AddPatientForm({ onClose }) {
     onSubmit: async (values) => {
       const payload = toPatientCreatePayload(values);
       await createPatient.mutateAsync(payload);
-      onClose?.();
+      onClose?.(true);
     },
   });
 
@@ -53,7 +53,7 @@ export default function AddPatientForm({ onClose }) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onClose?.();
+            onClose?.(false);
           }}
           className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
           aria-label="Close"
