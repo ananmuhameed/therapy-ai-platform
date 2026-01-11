@@ -72,7 +72,6 @@ export default function SessionsPage() {
         month: "short",
         day: "2-digit",
       }),
-      // ✅ match backend enum (default: empty)
       status: String(s.status || "empty").toLowerCase(),
       openPath: `/sessions/${s.id}`,
     }));

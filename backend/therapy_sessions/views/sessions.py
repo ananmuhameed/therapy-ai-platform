@@ -1,11 +1,13 @@
 from django.db import transaction
+from django.conf import settings
+from django.utils import timezone
 
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
-from therapy_sessions.models import TherapySession, SessionAudio
+from therapy_sessions.models import TherapySession, SessionAudio, SessionAudioUpload
 from therapy_sessions.tasks import transcribe_session
 
 from therapy_sessions.serializers.session import (
@@ -14,7 +16,12 @@ from therapy_sessions.serializers.session import (
 )
 from therapy_sessions.serializers.audio import SessionAudioUploadSerializer
 
+from therapy_sessions.serializers.audio_multipart import ( MultipartPresignSerializer, MultipartCompleteSerializer)
+from therapy_sessions.services.s3.s3_client import s3_client, s3_bucket
+from therapy_sessions.services.s3.storage_key import session_audio_key 
 
+
+MULTIPART_PART_SIZE = 10 * 1024 * 1024  # 10 MB
 class TherapySessionViewSet(viewsets.ModelViewSet):
     serializer_class = TherapySessionSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -129,3 +136,153 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             {"detail": "Audio replaced. Transcription restarted.", "audio_id": new_audio.id},
             status=status.HTTP_200_OK,
         )
+
+
+
+
+
+# --------------------- AWS S3 MULTIPART UPLOADS ---------------------
+    
+
+    @action(detail=True, methods=["post"], url_path="audio/multipart/start")
+    def audio_multipart_start(self, request, pk=None):
+        session = self.get_object()
+
+        if not getattr(settings, "USE_S3", False):
+            return Response({"detail": "S3 upload not enabled (USE_S3=1)."}, status=400)
+
+        with transaction.atomic():
+            locked = TherapySession.objects.select_for_update().get(pk=session.pk)
+
+            if SessionAudio.objects.filter(session=locked).exists():
+                return Response({"detail": "Audio already exists for this session."}, status=409)
+
+            # If an upload exists and still uploading, you can either reuse or abort+restart
+            existing = getattr(locked, "audio_upload", None)
+            if existing and existing.status == "uploading":
+                return Response(
+                    {"detail": "Multipart upload already started for this session.", "uploadId": existing.upload_id, "key": existing.s3_key, "partSize": MULTIPART_PART_SIZE},
+                    status=200,
+                )
+
+            key = session_audio_key(locked, request.data.get("filename", "audio.webm"))
+
+            s3 = s3_client()
+            resp = s3.create_multipart_upload(
+                Bucket=s3_bucket(),
+                Key=key,
+                ContentType=request.data.get("content_type") or "audio/webm",
+            )
+            upload_id = resp["UploadId"]
+
+            SessionAudioUpload.objects.update_or_create(
+                session=locked,
+                defaults={"s3_key": key, "upload_id": upload_id, "status": "uploading"},
+            )
+
+        return Response({"uploadId": upload_id, "key": key, "partSize": MULTIPART_PART_SIZE}, status=201)
+
+    @action(detail=True, methods=["post"], url_path="audio/multipart/presign")
+    def audio_multipart_presign(self, request, pk=None):
+        session = self.get_object()
+
+        if not getattr(settings, "USE_S3", False):
+            return Response({"detail": "S3 upload not enabled (USE_S3=1)."}, status=400)
+
+        ser = MultipartPresignSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        upload_id = ser.validated_data["uploadId"]
+        part_number = ser.validated_data["partNumber"]
+
+        upload = getattr(session, "audio_upload", None)
+        if not upload or upload.status != "uploading" or upload.upload_id != upload_id:
+            return Response({"detail": "No active multipart upload for this session."}, status=404)
+
+        s3 = s3_client()
+        url = s3.generate_presigned_url(
+            ClientMethod="upload_part",
+            Params={
+                "Bucket": s3_bucket(),
+                "Key": upload.s3_key,
+                "UploadId": upload_id,
+                "PartNumber": part_number,
+            },
+            ExpiresIn=60 * 10,  # 10 minutes
+        )
+        return Response({"url": url, "partNumber": part_number}, status=200)
+
+    @action(detail=True, methods=["post"], url_path="audio/multipart/complete")
+    def audio_multipart_complete(self, request, pk=None):
+        session = self.get_object()
+
+        if not getattr(settings, "USE_S3", False):
+            return Response({"detail": "S3 upload not enabled (USE_S3=1)."}, status=400)
+
+        ser = MultipartCompleteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        upload_id = ser.validated_data["uploadId"]
+        parts = ser.validated_data["parts"]
+        parts_sorted = sorted(parts, key=lambda p: p["PartNumber"])
+
+        with transaction.atomic():
+            locked = TherapySession.objects.select_for_update().get(pk=session.pk)
+
+            if SessionAudio.objects.filter(session=locked).exists():
+                return Response({"detail": "Audio already exists for this session."}, status=409)
+
+            upload = getattr(locked, "audio_upload", None)
+            if not upload or upload.status != "uploading" or upload.upload_id != upload_id:
+                return Response({"detail": "No active multipart upload for this session."}, status=404)
+
+            s3 = s3_client()
+            s3.complete_multipart_upload(
+                Bucket=s3_bucket(),
+                Key=upload.s3_key,
+                UploadId=upload_id,
+                MultipartUpload={"Parts": parts_sorted},
+            )
+
+            # Create the final SessionAudio record.
+            # With django-storages default storage = S3, FileField stores the key string.
+            audio = SessionAudio.objects.create(
+                session=locked,
+                audio_file=upload.s3_key,  # <- key string works with S3Storage
+                original_filename=(request.data.get("original_filename") or "")[:255],
+                language_code=(request.data.get("language_code") or "")[:10],
+            )
+
+            upload.status = "completed"
+            upload.save(update_fields=["status"])
+
+            locked.status = "transcribing"
+            locked.last_error_stage = ""
+            locked.last_error_message = ""
+            locked.save(update_fields=["status", "last_error_stage", "last_error_message", "updated_at"])
+
+            transaction.on_commit(lambda: transcribe_session.delay(locked.id))
+
+        return Response({"detail": "Upload completed. Transcription started.", "audio_id": audio.id}, status=201)
+
+    @action(detail=True, methods=["post"], url_path="audio/multipart/abort")
+    def audio_multipart_abort(self, request, pk=None):
+        session = self.get_object()
+
+        if not getattr(settings, "USE_S3", False):
+            return Response({"detail": "S3 upload not enabled (USE_S3=1)."}, status=400)
+
+        upload = getattr(session, "audio_upload", None)
+        if not upload or upload.status != "uploading":
+            return Response({"detail": "No active multipart upload."}, status=404)
+
+        s3 = s3_client()
+        s3.abort_multipart_upload(
+            Bucket=s3_bucket(),
+            Key=upload.s3_key,
+            UploadId=upload.upload_id,
+        )
+        upload.status = "aborted"
+        upload.save(update_fields=["status"])
+
+        return Response({"detail": "Multipart upload aborted."}, status=200)

@@ -3,6 +3,9 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.core.exceptions import ValidationError
 from core.models import TimeStampedModel
+import uuid
+from django.utils import timezone
+from datetime import timedelta
 
 # ---------- UserManager / User  ----------
 class UserManager(BaseUserManager):
@@ -26,6 +29,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
 
     is_therapist = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -74,3 +78,13 @@ class TherapistProfile(TimeStampedModel):
         if self.user and not self.user.is_therapist:
             raise ValidationError("User must be a therapist to have a TherapistProfile.")
 
+
+# ---------- Email Verification Model ----------
+class EmailVerification(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at

@@ -155,7 +155,7 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <button
+          {/* <button
             onClick={handleRefresh}
             className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer disabled:opacity-60"
             type="button"
@@ -164,7 +164,7 @@ export default function ReportsPage() {
           >
             <FiRefreshCw />
             {fetching ? "Refreshing..." : "Refresh"}
-          </button>
+          </button> */}
         </div>
 
         {/* Error */}

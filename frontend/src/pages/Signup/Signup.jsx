@@ -1,15 +1,20 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, User } from "lucide-react";
-import api from "../../api/axiosInstance";
 import { useGoogleLogin } from "@react-oauth/google";
 import { FaGoogle } from "react-icons/fa";
+
+import api, { raw } from "../../api/axiosInstance";
 import { setAuth } from "../../auth/storage";
 
 // Components
 import AuthSplitLayout from "../../layouts/AuthSplitLayout";
 import AuthInput from "../../components/ui/AuthInput";
-import { signupSchema, toSignupPayload, mapAuthFieldErrors } from "../../Forms/schemas";
+import {
+  signupSchema,
+  toSignupPayload,
+  mapAuthFieldErrors,
+} from "../../Forms/schemas";
 import { useAppFormik } from "../../Forms/useAppFormik";
 
 export default function Signup() {
@@ -28,13 +33,31 @@ export default function Signup() {
     },
     validationSchema: signupSchema,
     mapFieldErrors: mapAuthFieldErrors,
+
     onSubmit: async (values) => {
       setMessage("");
+
       try {
-        await api.post("/auth/register/", toSignupPayload(values));
-        navigate("/login", { replace: true });
+        const payload = toSignupPayload(values);
+        console.log("REGISTER PAYLOAD:", payload);
+
+        await raw.post("/auth/register/", payload);
+
+        setMessage(
+          "Account created successfully. Please check your email to verify your account."
+        );
+
+        setTimeout(() => {
+          navigate("/login", { replace: true });
+        }, 1500);
       } catch (error) {
-        setMessage("Registration failed. Please try again.");
+        console.error("REGISTER ERROR:", error.response?.data);
+
+        if (error.response?.data) {
+          formik.setErrors(mapAuthFieldErrors(error.response.data));
+        } else {
+          setMessage("Registration failed. Please try again.");
+        }
       }
     },
   });
@@ -79,11 +102,17 @@ export default function Signup() {
       <h2 className="text-3xl lg:text-4xl font-bold mb-2 text-[#F0F3FA]">
         Create Account
       </h2>
-      <p className="text-base mb-6 text-[#8D8F8E]">Fill in your details to get started</p>
+      <p className="text-base mb-6 text-[#8D8F8E]">
+        Fill in your details to get started
+      </p>
 
-      {/* Server (non-field) error */}
-      {apiError && <p className="mb-4 text-red-500 font-medium">{apiError}</p>}
-      {message && <p className="mb-4 text-green-600 font-medium">{message}</p>}
+      {/* Server / global messages */}
+      {apiError && (
+        <p className="mb-4 text-red-500 font-medium">{apiError}</p>
+      )}
+      {message && (
+        <p className="mb-4 text-green-600 font-medium">{message}</p>
+      )}
 
       <form onSubmit={formik.handleSubmit} className="space-y-5">
         {/* Full Name */}
@@ -99,9 +128,11 @@ export default function Signup() {
             placeholder="Your full name"
             autoComplete="name"
           />
-          {formik.touched.fullName && formik.errors.fullName ? (
-            <p className="mt-1 text-sm text-red-500">{formik.errors.fullName}</p>
-          ) : null}
+          {formik.touched.fullName && formik.errors.fullName && (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.fullName}
+            </p>
+          )}
         </div>
 
         {/* Email */}
@@ -117,9 +148,11 @@ export default function Signup() {
             placeholder="you@example.com"
             autoComplete="email"
           />
-          {formik.touched.email && formik.errors.email ? (
-            <p className="mt-1 text-sm text-red-500">{formik.errors.email}</p>
-          ) : null}
+          {formik.touched.email && formik.errors.email && (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.email}
+            </p>
+          )}
         </div>
 
         {/* Password */}
@@ -130,7 +163,7 @@ export default function Signup() {
             label="Password"
             icon={Lock}
             type="password"
-            isPassword={true}
+            isPassword
             showPassword={showPassword}
             onTogglePassword={() => setShowPassword(!showPassword)}
             value={formik.values.password}
@@ -139,9 +172,11 @@ export default function Signup() {
             placeholder="••••••••"
             autoComplete="new-password"
           />
-          {formik.touched.password && formik.errors.password ? (
-            <p className="mt-1 text-sm text-red-500">{formik.errors.password}</p>
-          ) : null}
+          {formik.touched.password && formik.errors.password && (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.password}
+            </p>
+          )}
         </div>
 
         {/* Confirm Password */}
@@ -152,34 +187,38 @@ export default function Signup() {
             label="Confirm Password"
             icon={Lock}
             type="password"
-            isPassword={true}
+            isPassword
             showPassword={showConfirmPassword}
-            onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
+            onTogglePassword={() =>
+              setShowConfirmPassword(!showConfirmPassword)
+            }
             value={formik.values.confirmPassword}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
             placeholder="••••••••"
             autoComplete="new-password"
           />
-          {formik.touched.confirmPassword && formik.errors.confirmPassword ? (
-            <p className="mt-1 text-sm text-red-500">{formik.errors.confirmPassword}</p>
-          ) : null}
+          {formik.touched.confirmPassword &&
+            formik.errors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-500">
+                {formik.errors.confirmPassword}
+              </p>
+            )}
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={formik.isSubmitting}
-          className="w-full py-3.5 rounded-xl font-semibold bg-[#5B687C] text-[#D4CDCB] hover:bg-[#6e7b8c] transition-colors disabled:opacity-60 cursor-pointer"
+          className="w-full py-3.5 rounded-xl font-semibold bg-[#5B687C] text-[#D4CDCB] hover:bg-[#6e7b8c] transition-colors disabled:opacity-60"
         >
           {formik.isSubmitting ? "Creating..." : "Create Account"}
         </button>
       </form>
 
       <div className="flex items-center my-8">
-        <div className="flex-grow border-t border-[#5B687C]"></div>
+        <div className="flex-grow border-t border-[#5B687C]" />
         <span className="mx-4 text-[#8D8F8E] text-sm">Or continue with</span>
-        <div className="flex-grow border-t border-[#5B687C]"></div>
+        <div className="flex-grow border-t border-[#5B687C]" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
@@ -194,7 +233,10 @@ export default function Signup() {
 
       <p className="mt-8 text-center text-[#8D8F8E]">
         Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-[#ebf2f5] hover:underline">
+        <Link
+          to="/login"
+          className="font-semibold text-[#ebf2f5] hover:underline"
+        >
           Sign in
         </Link>
       </p>

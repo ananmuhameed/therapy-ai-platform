@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePatients } from "../../queries/patients";
 import { qk } from "../../queries/queryKeys";
@@ -17,14 +17,27 @@ import PatientSelector from "./PatientSelector";
 import SessionActionButtons from "./SessionActionButtons";
 import RecordingInterface from "./RecordingInterface";
 
+import { uploadFileAudio } from "../../services/uploadFileAudio";
+import { createSessionFormData } from "../../api/sessions";
+import { createRecordingChunkSource, uploadRecordingAudio } from "../../services/uploadRecordingAudio";
+
+
 export default function SessionPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, []);
 
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const queryClient = useQueryClient();
   const streamRef = useRef(null);
+  const [micStream, setMicStream] = useState(null);
 
   // --- State ---
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -38,159 +51,295 @@ export default function SessionPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [finalizeMsg, setFinalizeMsg] = useState("");
+
+  const [recordingMs, setRecordingMs] = useState(0);
+
+  const timerRef = useRef(null);
+  const startedAtRef = useRef(null);     // timestamp when current run started
+  const accumulatedMsRef = useRef(0);    // total ms from previous runs (after pauses)
+
+  const stopMicStream = () => {
+    try {
+      const s = streamRef.current;
+      if (!s) return;
+      s.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    } catch { }
+    streamRef.current = null;
+    setMicStream(null);
+  };
+
   // Fetch patients using React Query
   const { data: patients = [], isLoading: patientsLoading } = usePatients();
 
-  // Handle file upload logic
+  // --- Logic ---
+  // ✅ Correct flow:
+  // 1) Create session (JSON)
+  // 2) Upload audio to /sessions/:id/upload-audio/ (multipart)
+  // 3) navigate to session details
+
   const handleUploadFile = async (patientId, file) => {
-    setUploadError("");
-    setUploadSuccess("");
-    setLastSessionId(null);
     setIsUploading(true);
+    setUploadError("");
 
     try {
-      // Validate input using Yup schema
-      await sessionAudioUploadSchema.validate(
-        { patientId: Number(patientId), file },
-        { abortEarly: true }
-      );
+      // 1) create session (FormData)
+      const { data: session } = await createSessionFormData({ patientId });
 
-      // Step 1: Create session with JSON (required by DRF perform_create)
-      const createRes = await api.post("/sessions/", { patient: Number(patientId) });
-      const sessionId = createRes?.data?.id;
-      if (!sessionId) throw new Error("Session created but no ID returned.");
-
-      // Step 2: Upload audio file to upload-audio action endpoint
-      const formData = new FormData();
-      formData.append("audio_file", file);
-
-      await api.post(`/sessions/${sessionId}/upload-audio/`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      // 2) upload audio via multipart
+      await uploadFileAudio({
+        sessionId: session.id,
+        file,
+        languageCode: "en",
+        // onProgress: (ratio) => setUploadProgress(Math.round(ratio * 100)),
       });
 
-      // Step 3: Verify if audio was uploaded
-      const verify = await api.get(`/sessions/${sessionId}/`);
-      const hasAudio =
-        !!verify?.data?.audio_url || !!verify?.data?.audio?.audio_file || !!verify?.data?.audio;
-
-      if (!hasAudio) {
-        throw new Error("Upload succeeded but session does not show audio. Check serializer fields/storage settings.");
-      }
-
-      setLastSessionId(sessionId);
-      setUploadSuccess("Audio uploaded. Transcription started.");
+      navigate(`/sessions/${session.id}`);
     } catch (err) {
       console.error(err);
-
-      // Handle errors from validation or API
-      if (err?.name === "ValidationError") {
-        setUploadError(err.message || "Invalid input.");
-      } else {
-        const parsed = parseServerErrors?.(err);
-        const nonField = parsed?.nonFieldError;
-        const fieldErrors = parsed?.fieldErrors || {};
-
-        const fallback =
-          err?.response?.data?.detail ||
-          err?.response?.data?.audio_file?.[0] ||
-          err?.response?.data?.patient?.[0] ||
-          err?.message ||
-          "Failed to upload.";
-
-        const msg =
-          nonField || fieldErrors.audio_file?.[0] || fieldErrors.patient?.[0] || fallback;
-
-        setUploadError(msg);
-      }
+      setUploadError(err?.response?.data?.detail || err.message || "Upload failed.");
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Start recording
   const startRecording = async () => {
-    if (!selectedPatientId) {
-      setUploadError("Select a patient first.");
-      return;
-    }
-    if (isUploading || isRecording) return;
-
+    if (!selectedPatientId) return;
     setUploadError("");
-    setUploadSuccess("");
-    setLastSessionId(null);
+    setIsRecorderVisible(true);
+    setIsRecording(true);
+    setIsPaused(false);
+
 
     try {
+      // 1) create session first (so we have sessionId)
+      const { data: session } = await createSessionFormData({ patientId: selectedPatientId });
+
+      // 2) prepare chunk source
+      const source = createRecordingChunkSource();
+
+      // 3) start upload runner (it will wait for chunks)
+      const uploadPromise = uploadRecordingAudio({
+        sessionId: session.id,
+        filename: `recording_${Date.now()}.webm`,
+        languageCode: "en",
+        getNextChunk: source.getNextChunk,
+        onProgressBytes: (bytes) => {
+          // optional: show bytes uploaded
+        },
+      });
+
+      // 4) start recorder
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
+      setMicStream(stream);
 
-      // Don't force mimeType (Safari breaks)
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
+
+      resetTimer();
+      startTimer();
 
       recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onerror = () => {
-        setUploadError("Recording failed. Please try again.");
-        setIsRecording(false);
-        setIsPaused(false);
-        setIsRecorderVisible(false);
+        if (e.data && e.data.size > 0) source.pushBlob(e.data);
       };
 
       recorder.onstop = async () => {
+        // stop mic asap
+        // try { stream.getTracks().forEach((t) => t.stop()); } catch { }
+        stopMicStream();
+
+        // tell uploader we're done so no more chunks are coming
+        source.markDone();
+
         try {
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((t) => t.stop());
-            streamRef.current = null;
-          }
-        } catch {}
+          // keep overlay visible while uploading/completing multipart
+          await uploadPromise;
 
-        const mime = recorder.mimeType || "audio/webm";
-        const blob = new Blob(chunksRef.current, { type: mime });
+          navigate(`/sessions/${session.id}`);
+          resetTimer();
 
-        if (!blob || blob.size === 0) {
-          setUploadError("Recording was empty. Try again.");
+        } catch (err) {
+          console.error(err);
+          setUploadError(err.message || "Failed to upload recording.");
+
+          // If upload fails, bring the UI back (optional)
+          setIsRecorderVisible(true);
+        } finally {
           setIsRecording(false);
           setIsPaused(false);
-          setIsRecorderVisible(false);
-          return;
+          setIsFinalizing(false); // hide overlay
         }
-
-        const ext = mime.includes("webm")
-          ? "webm"
-          : mime.includes("ogg")
-          ? "ogg"
-          : "wav";
-
-        const file = new File([blob], `recording_${Date.now()}.${ext}`, { type: mime });
-
-        setIsRecording(false);
-        setIsPaused(false);
-        setIsRecorderVisible(false);
-
-        await handleUploadFile(selectedPatientId, file);
       };
 
-      setIsRecorderVisible(true);
-      setIsRecording(true);
-      setIsPaused(false);
-      recorder.start();
+      recorder.start(5000); // timeslice: emit blobs every 5s
     } catch (err) {
       console.error(err);
-      setUploadError("Microphone access denied. Please allow permissions.");
+      setUploadError("Microphone access denied or session init failed.");
+      setIsRecording(false);
+      setIsPaused(false);
+      setIsRecorderVisible(false);
+      // try { stream?.getTracks()?.forEach((t) => t.stop()); } catch (_) { }
+      stopMicStream();
     }
   };
+
+
+  // const handleUploadFile = async (patientId, file) => {
+  //   if (!patientId || !file) return;
+
+  //   setIsUploading(true);
+  //   setUploadError("");
+  //   setUploadSuccess("");
+  //   setLastSessionId(null);
+
+  //   try {
+  //     // 1) Create session (backend ModelViewSet expects JSON, not multipart)
+  //     const createRes = await api.post("/sessions/", {
+  //       patient: patientId,
+  //       // If your backend requires session_date/duration, add them here.
+  //       // session_date: new Date().toISOString(),
+  //     });
+
+  //     const newSessionId = createRes?.data?.id;
+  //     if (!newSessionId) throw new Error("Session created but no id returned.");
+
+  //     // 2) Upload audio to the correct endpoint (this is what your backend supports)
+  //     const formData = new FormData();
+  //     formData.append("audio_file", file);
+
+  //     await api.post(`/sessions/${newSessionId}/upload-audio/`, formData, {
+  //       headers: { "Content-Type": "multipart/form-data" },
+  //     });
+
+  //     setLastSessionId(newSessionId);
+  //     setUploadSuccess("Audio saved successfully.");
+  //   } catch (err) {
+  //     console.error(err);
+  //     const msg =
+  //       err?.response?.data?.detail ||
+  //       err?.response?.data?.audio_file?.[0] ||
+  //       err?.response?.data?.patient?.[0] ||
+  //       err?.message ||
+  //       "Failed to upload.";
+  //     setUploadError(msg);
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
+  // const startRecording = async () => {
+  //   if (!selectedPatientId) {
+  //     setUploadError("Select a patient first.");
+  //     return;
+  //   }
+  //   if (isUploading || isRecording) return;
+
+  //   setUploadError("");
+  //   setUploadSuccess("");
+  //   setLastSessionId(null);
+
+  //   try {
+  //     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  //     streamRef.current = stream;
+
+  //     // ✅ don't force mimeType (Safari breaks)
+  //     const recorder = new MediaRecorder(stream);
+  //     mediaRecorderRef.current = recorder;
+  //     chunksRef.current = [];
+
+  //     recorder.ondataavailable = (e) => {
+  //       if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+  //     };
+
+  //     recorder.onerror = () => {
+  //       setUploadError("Recording failed. Please try again.");
+  //       setIsRecording(false);
+  //       setIsPaused(false);
+  //       setIsRecorderVisible(false);
+  //     };
+
+  //     recorder.onstop = async () => {
+  //       // cleanup stream
+  //       try {
+  //         if (streamRef.current) {
+  //           streamRef.current.getTracks().forEach((t) => t.stop());
+  //           streamRef.current = null;
+  //         }
+  //       } catch {}
+
+  //       const mime = recorder.mimeType || "audio/webm";
+  //       const blob = new Blob(chunksRef.current, { type: mime });
+
+  //       // guard: empty recording
+  //       if (!blob || blob.size === 0) {
+  //         setUploadError("Recording was empty. Try again.");
+  //         setIsRecording(false);
+  //         setIsPaused(false);
+  //         setIsRecorderVisible(false);
+  //         return;
+  //       }
+
+  //       const ext = mime.includes("webm") ? "webm" : mime.includes("ogg") ? "ogg" : "wav";
+  //       const file = new File([blob], `recording_${Date.now()}.${ext}`, { type: mime });
+
+  //       // reset UI
+  //       setIsRecording(false);
+  //       setIsPaused(false);
+  //       setIsRecorderVisible(false);
+
+  //       // ✅ save only (no navigation)
+  //       await handleUploadFile(selectedPatientId, file);
+  //     };
+
+  //     setIsRecorderVisible(true);
+  //     setIsRecording(true);
+  //     setIsPaused(false);
+  //     recorder.start();
+  //   } catch (err) {
+  //     console.error(err);
+  //     setUploadError("Microphone access denied. Please allow permissions.");
+  //   }
+  // };
 
   // Stop recording
   const stopRecording = () => {
     const r = mediaRecorderRef.current;
-    if (!r || r.state === "inactive") return;
+    if (!r || r.state === "inactive") {
+      stopMicStream();
+      return;
+    }
+    // Immediately hide recorder/playback UI and show loading overlay
+    stopMicStream();
+    setMicStream(null);
+
+    setIsFinalizing(true);
+    setFinalizeMsg("Session recorded successfully. Please wait...");
+    setIsRecorderVisible(false);
+    setIsPaused(false);
+    pauseTimer();
+
     try {
-      r.stop(); // triggers onstop → upload
-    } catch {}
+      // Forces a final dataavailable chunk ASAP (helps reduce “waiting” feel)
+      if (r.state === "recording") r.requestData();
+    } catch { }
+
+    try {
+      r.stop(); // triggers onstop (upload + navigate)
+    } catch { }
   };
+
+  useEffect(() => {
+    return () => {
+      try {
+        const r = mediaRecorderRef.current;
+        if (r && r.state !== "inactive") r.stop();
+      } catch { }
+      stopMicStream();
+    };
+  }, []);
 
   // Pause recording
   const pauseRecording = () => {
@@ -199,7 +348,8 @@ export default function SessionPage() {
       try {
         r.pause();
         setIsPaused(true);
-      } catch {}
+        pauseTimer();
+      } catch { }
     }
   };
 
@@ -210,7 +360,8 @@ export default function SessionPage() {
       try {
         r.resume();
         setIsPaused(false);
-      } catch {}
+        startTimer();
+      } catch { }
     }
   };
 
@@ -245,6 +396,39 @@ export default function SessionPage() {
     if (!fileInputRef.current) return;
     fileInputRef.current.value = ""; // allow same file selection again
     fileInputRef.current.click();
+  };
+
+  const startTimer = () => {
+    if (timerRef.current) return;
+    startedAtRef.current = Date.now();
+
+    timerRef.current = setInterval(() => {
+      const now = Date.now();
+      const runMs = now - (startedAtRef.current ?? now);
+      setRecordingMs(accumulatedMsRef.current + runMs);
+    }, 250); // smooth enough, cheap
+  };
+
+  const pauseTimer = () => {
+    if (!timerRef.current) return;
+
+    const now = Date.now();
+    const runMs = now - (startedAtRef.current ?? now);
+    accumulatedMsRef.current += runMs;
+
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    startedAtRef.current = null;
+
+    setRecordingMs(accumulatedMsRef.current);
+  };
+
+  const resetTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    startedAtRef.current = null;
+    accumulatedMsRef.current = 0;
+    setRecordingMs(0);
   };
 
   return (
@@ -302,7 +486,25 @@ export default function SessionPage() {
             onPause={pauseRecording}
             onResume={resumeRecording}
             isUploading={isUploading}
+            recordingMs={recordingMs}
+            micStream={micStream}
+            
           />
+        )}
+
+        {isFinalizing && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl px-6 py-5 w-full max-w-md text-center">
+                <div className="text-lg font-semibold">Session recorded successfully</div>
+                <div className="text-sm text-gray-600 mt-2">Please wait...</div>
+                <div className="mt-4">
+                  {/* your spinner */}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </main>
 

@@ -1,10 +1,17 @@
 import { IoPersonOutline } from "react-icons/io5";
 import { calculateAge, classNames } from "../../utils/helpers";
 
-export default function PatientInfoCard({ patient, patientId, isEditing, onChange }) {
-  const inputBase = "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:border-[#3078E2] focus:ring-2 focus:ring-[#3078E2]/20 disabled:bg-gray-50 disabled:text-gray-500 cursor-text";
+export default function PatientInfoCard({
+  patient,
+  patientId,
+  isEditing,
+  onChange,
+}) {
+  const inputBase =
+    "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:border-[#3078E2] focus:ring-2 focus:ring-[#3078E2]/20 disabled:bg-gray-50 disabled:text-gray-500 cursor-text";
+
   const cardBase = "rounded-2xl bg-white shadow-sm ring-1 ring-gray-100";
-  
+
   const age = calculateAge(patient.date_of_birth);
 
   return (
@@ -16,6 +23,7 @@ export default function PatientInfoCard({ patient, patientId, isEditing, onChang
           </div>
 
           <div className="w-full">
+            {/* Name */}
             {isEditing ? (
               <input
                 name="full_name"
@@ -30,9 +38,10 @@ export default function PatientInfoCard({ patient, patientId, isEditing, onChang
               </h1>
             )}
 
+            {/* Gender + DOB */}
             {!isEditing ? (
               <p className="mt-1 text-sm text-gray-600">
-                {patient.gender || "Gender"}{" "}
+                {patient.gender || "Gender"}
                 {age ? (
                   <>
                     <span className="mx-1">•</span>
@@ -42,17 +51,25 @@ export default function PatientInfoCard({ patient, patientId, isEditing, onChang
               </p>
             ) : (
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
-                <input
+                {/* ✅ Gender dropdown */}
+                <select
                   name="gender"
-                  value={patient.gender}
+                  value={patient.gender || ""}
                   onChange={onChange}
-                  placeholder="Gender"
                   className={inputBase}
-                />
+                >
+                  <option value="" disabled>
+                    Select gender
+                  </option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+
+                {/* Date of birth */}
                 <input
                   type="date"
                   name="date_of_birth"
-                  value={patient.date_of_birth}
+                  value={patient.date_of_birth || ""}
                   onChange={onChange}
                   className={inputBase}
                 />

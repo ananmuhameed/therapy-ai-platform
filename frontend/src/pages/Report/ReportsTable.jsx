@@ -9,10 +9,10 @@ export default function ReportsTable({ loading, error, reports, onOpen }) {
   return (
     <TableCard
       columns={[
-        { label: "#", className: "col-span-1" },
-        { label: "Patient", className: "col-span-5" },
-        { label: "Date", className: "col-span-3" },
-        { label: "Status", className: "col-span-2" },
+        { label: "#", className: "col-span-2" },
+        { label: "Patient", className: "col-span-2" },
+        { label: "Date", className: "col-span-3 text-center" },
+        { label: "Status", className: "col-span-3 text-center" },
         { label: "Open", className: "col-span-1 text-right" },
       ]}
       loading={loading}
@@ -33,21 +33,21 @@ export default function ReportsTable({ loading, error, reports, onOpen }) {
             onOpen={() => onOpen(r.openPath)}
             title={canOpen ? "Open session" : "No session to open"}
           >
-            <div className="col-span-1 text-sm text-gray-700">{r.indexLabel}</div>
+            <div className="col-span-2 text-sm text-gray-700">{r.indexLabel}</div>
 
-            <div className="col-span-5 min-w-0">
+            <div className="col-span-2 min-w-0">
               <div className="text-sm text-gray-900 font-medium truncate">
                 {r.patientName}
               </div>
-              <div className="mt-0.5 text-xs text-gray-500 font-normal">
+              {/* <div className="mt-0.5 text-xs text-gray-500 font-normal">
                 Session ID:{" "}
                 <span className="font-mono">{r.sessionId ?? "—"}</span>
-              </div>
+              </div> */}
             </div>
 
-            <div className="col-span-3 text-sm text-gray-700">{r.date}</div>
+            <div className="col-span-3 text-sm text-gray-700 text-center">{r.date}</div>
 
-            <div className="col-span-2">
+            <div className="col-span-3 text-center">
               <StatusPill status={r.status} />
             </div>
 

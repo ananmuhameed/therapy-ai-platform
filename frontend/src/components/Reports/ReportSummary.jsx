@@ -5,21 +5,45 @@ const ReportSummary = ({ report }) => {
   if (!report) return null;
 
   // Helper to ensure we render lists correctly 
+  // Helper to ensure we render lists correctly
   const renderList = (data) => {
     if (!data) return <p className="text-gray-400 text-sm italic">None detected</p>;
-    
-    let items = Array.isArray(data) ? data : [];
-    
+
+    const items = Array.isArray(data) ? data : [];
     if (items.length === 0) return <p className="text-gray-400 text-sm italic">None detected</p>;
 
     return (
       <ul className="list-disc list-inside space-y-1">
-        {items.map((item, idx) => (
-          <li key={idx} className="text-gray-700 text-sm">{item}</li>
-        ))}
+        {items.map((item, idx) => {
+          // If item is an object (e.g., risk flag), render its fields
+          if (item && typeof item === "object") {
+            const type = item.type ?? "risk";
+            const severity = item.severity ?? "unknown";
+            const note = item.note ?? "";
+
+            return (
+              <li key={idx} className="text-gray-700 text-sm">
+                <span className="font-semibold">{String(type)}</span>
+                {" "}
+                <span className="uppercase text-xs font-bold">
+                  ({String(severity)})
+                </span>
+                {note ? `: ${String(note)}` : ""}
+              </li>
+            );
+          }
+
+          // Otherwise render as string
+          return (
+            <li key={idx} className="text-gray-700 text-sm">
+              {String(item)}
+            </li>
+          );
+        })}
       </ul>
     );
   };
+
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -63,15 +87,15 @@ const ReportSummary = ({ report }) => {
               <AlertTriangle size={14} /> Risk Flags
             </h3>
             <div className="bg-red-50/30 p-4 rounded-lg border border-red-100 h-full">
-               {renderList(report.risk_flags)}
+              {renderList(report.risk_flags)}
             </div>
           </div>
         </div>
-        
+
         {/* Treatment Plan */}
-         <div className="space-y-2">
+        <div className="space-y-2">
           <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-             Suggested Treatment Plan
+            Suggested Treatment Plan
           </h3>
           <div className="bg-blue-50/30 p-4 rounded-lg border border-blue-100">
             {renderList(report.treatment_plan)}

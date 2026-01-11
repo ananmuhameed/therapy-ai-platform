@@ -42,7 +42,7 @@ export function toSignupPayload(values) {
     last_name,
     email: String(values.email || "").trim(),
     password: values.password,
-    password_confirm: values.confirmPassword,
+    password_confirm: values.confirmPassword, // ✅ FIX
   };
 }
 

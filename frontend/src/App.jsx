@@ -15,7 +15,7 @@ import SessionsPage from "./pages/SessionsList/SessionsPage";
 import ReportsPage from "./pages/Report/ReportsPage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
+import VerifyEmail from "./pages/VerifyEmai/VerifyEmail";
 
 function App() {
   const navigate = useNavigate();
@@ -30,6 +30,8 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+
         <Route path="/patients/:patientId" element={<PatientProfile />} />
         <Route path="/therapistprofile" element={<TherapistProfile />} />
         <Route path="/sessions/:sessionId" element={<SessionDetailsPage />} />
@@ -39,7 +41,7 @@ function App() {
           <Route path="/patients" element={<PatientsListPage />} />
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/reports" element={<ReportsPage />} />
-
+          
         </Route>
       </Routes>
       <ToastContainer

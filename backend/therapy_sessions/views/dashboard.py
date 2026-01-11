@@ -15,17 +15,21 @@ class TherapistDashboardStatsView(APIView):
     def get(self, request):
         therapist = request.user  # or request.user.therapist
 
-        now = timezone.localtime(timezone.now())
-        start_of_week = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=now.weekday())
+        now = timezone.now()
+        start_of_week = (now - timedelta(days=now.weekday())).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         end_of_week = start_of_week + timedelta(days=7)
+
 
         patients_count = Patient.objects.filter(therapist=therapist).count()
 
         sessions_this_week = TherapySession.objects.filter(
             therapist=therapist,
-            session_date__gte=start_of_week,
-            session_date__lt=end_of_week,
+            created_at__gte=start_of_week,
+            created_at__lt=end_of_week,
         ).count()
+
 
         reports_ready_this_week = SessionReport.objects.filter(
             session__therapist=therapist,
