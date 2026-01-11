@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import React from "react";
 import { setNavigate } from "./auth/navigation";
 import "./index.css";
 import MainLayout from "./layouts/MainLayout";
@@ -16,6 +17,10 @@ import ReportsPage from "./pages/Report/ReportsPage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import VerifyEmail from "./pages/VerifyEmai/VerifyEmail";
+//lazy load home page
+import { Suspense } from "react";
+ const Home = React.lazy(() => import("../Home/pages/Home/Home"));
+ import LandingLayout from "../Home/Layout/Landinglayout";
 
 function App() {
   const navigate = useNavigate();
@@ -27,7 +32,12 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route element={<LandingLayout />}>
+        <Route path="/" element={<Navigate to="/home" />} />
+        
+       
+        <Route path="/home" element={<Home />} />
+        </Route>
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
