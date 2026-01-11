@@ -90,10 +90,6 @@ export default function Dashboard() {
 
   // ---- Load dashboard ----
   useEffect(() => {
-    if (!getAccessToken()) {
-      navigate("/login", { replace: true });
-      return;
-    }
 
     Promise.all([
       api.get("/dashboard/"),
@@ -147,6 +143,11 @@ export default function Dashboard() {
       }));
   }, [sessions, patients]);
 
+    const handlePatientAdded = () => {
+    setShowAddPatient(false);
+    fetchDashboardData();
+  };
+  
   if (!userLoaded) return <div>Loading...</div>;
 
   return (

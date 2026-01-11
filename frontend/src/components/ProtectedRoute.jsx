@@ -1,9 +1,9 @@
 import { Navigate } from "react-router-dom";
-import { getAccessToken } from "../auth/storage";
+import { getUser } from "../auth/storage";
 export default function ProtectedRoute({ children }) {
-  const token = getAccessToken();
+  const user = getUser();
 
-  if (!token) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
