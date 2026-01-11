@@ -19,6 +19,13 @@ from therapy_sessions.serializers.audio import SessionAudioUploadSerializer
 from therapy_sessions.serializers.audio_multipart import ( MultipartPresignSerializer, MultipartCompleteSerializer)
 from therapy_sessions.services.s3.s3_client import s3_client, s3_bucket
 from therapy_sessions.services.s3.storage_key import session_audio_key 
+from django.http import FileResponse, Http404
+from therapy_sessions.services.reporting.pdf import generate_report_pdf
+from therapy_sessions.serializers.report import (
+    SessionReportSerializer,
+    SessionReportUpdateSerializer,
+)
+
 
 
 MULTIPART_PART_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -89,6 +96,30 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             {"detail": "Upload successful. Transcription started.", "audio_id": audio.id},
             status=status.HTTP_201_CREATED,
         )
+    @action(detail=True, methods=["get"], url_path="audio/play")
+    def play_audio(self, request, pk=None):
+        session = self.get_object()
+
+        audio = getattr(session, "audio", None)
+        if not audio or not audio.audio_file:
+            return Response(
+                {"detail": "No audio available for this session."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        s3 = s3_client()
+
+        url = s3.generate_presigned_url(
+            ClientMethod="get_object",
+            Params={
+                "Bucket": s3_bucket(),
+                "Key": str(audio.audio_file),
+            },
+            ExpiresIn=60 * 60,  # 1 hour
+        )
+
+        return Response({"url": url})
+
 
     @action(detail=True, methods=["post"], url_path="replace-audio")
     def replace_audio(self, request, pk=None):
@@ -136,6 +167,44 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             {"detail": "Audio replaced. Transcription restarted.", "audio_id": new_audio.id},
             status=status.HTTP_200_OK,
         )
+    @action(detail=True, methods=["patch"], url_path="report")
+    def update_report(self, request, pk=None):
+        session = self.get_object()
+        report = session.report
+
+        serializer = SessionReportUpdateSerializer(
+            report,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            SessionReportSerializer(report).data
+        )
+    
+    @action(detail=True, methods=["get"], url_path="report/pdf")
+    def report_pdf(self, request, pk=None):
+        session = self.get_object()
+
+        if not hasattr(session, "report") or session.report.status != "completed":
+            return Response(
+                {"detail": "Report not completed yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # generate_report_pdf RETURNS BytesIO
+        pdf_buffer = generate_report_pdf(session)
+        pdf_buffer.seek(0)
+
+        return FileResponse(
+            pdf_buffer,
+            content_type="application/pdf",
+            as_attachment=True,
+            filename=f"session_{session.id}_report.pdf",
+        )
+
 
 
 

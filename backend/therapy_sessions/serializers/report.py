@@ -33,9 +33,9 @@ def _safe_json_load(value, default):
 
 
 class SessionReportSerializer(serializers.ModelSerializer):
-    key_points = serializers.SerializerMethodField()
-    risk_flags = serializers.SerializerMethodField()
-    treatment_plan = serializers.SerializerMethodField()
+    key_points = serializers.JSONField(read_only=True)
+    risk_flags = serializers.JSONField(read_only=True)
+    treatment_plan = serializers.JSONField(read_only=True)
 
     class Meta:
         model = SessionReport
@@ -52,16 +52,21 @@ class SessionReportSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = fields  # for now (GET only)
+        read_only_fields = fields
 
-    def get_key_points(self, obj):
-        return _safe_json_load(obj.key_points, default=[])
-
-    def get_risk_flags(self, obj):
-        return _safe_json_load(obj.risk_flags, default=[])
-
-    def get_treatment_plan(self, obj):
-        return _safe_json_load(obj.treatment_plan, default=[])
 
 class SessionReportNotesSerializer(serializers.Serializer):
     therapist_notes = serializers.CharField(allow_blank=True, required=True)
+
+
+class SessionReportUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SessionReport
+        fields = [
+            "generated_summary",
+            "therapist_notes",
+            "key_points",
+            "risk_flags",
+            "treatment_plan",
+            "therapist_notes",
+        ]
