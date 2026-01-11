@@ -91,6 +91,7 @@ await api.patch(`/sessions/${report.session}/report/`, payload);
     );
   };
 
+
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6 space-y-6 border-white">
       {/* HEADER */}

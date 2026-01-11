@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { FiUsers } from "react-icons/fi";
+import Swal from "sweetalert2";
 
 import api from "../../api/axiosInstance";
 import { usePatients } from "../../queries/patients";
@@ -13,37 +14,79 @@ import PatientsTable from "./PatientsTable";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
 
 export default function PatientsListPage() {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
 
-  // State
+  // UI state
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
-  const [showAdd, setShowAdd] = useState(false);
+  const [profileBlocked, setProfileBlocked] = useState(false);
 
-  // Sessions (for "Last session" column)
+  // sessions for "Last session" column
   const [sessions, setSessions] = useState([]);
 
-  // Data
+  // React Query data
   const {
     data: patients = [],
     isLoading,
     isFetching,
     error,
-    refetch,
   } = usePatients();
 
-  const errorMsg = useMemo(() => {
-    if (!error) return "";
-    return "Failed to load patients.";
-  }, [error]);
-
-  // URL -> modal state (single source of truth)
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    setShowAdd(params.get("add") === "1");
+  // URL controls the modal
+  const showAdd = useMemo(() => {
+    const sp = new URLSearchParams(location.search);
+    return sp.get("add") === "1";
   }, [location.search]);
+
+  // --- Alert ---
+  const showProfileAlert = useCallback(() => {
+    Swal.fire({
+      icon: "warning",
+      iconColor: "#3078E2",
+      title: "Profile incomplete",
+      text: "Please complete your profile first.",
+      showCancelButton: true,
+      confirmButtonText: "Go to profile",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#3078E2",
+      customClass: {
+        popup: "rounded-2xl",
+        confirmButton: "rounded-2xl",
+        cancelButton: "rounded-2xl",
+      },
+    }).then((res) => {
+      if (res.isConfirmed) navigate("/therapistprofile");
+    });
+  }, [navigate]);
+
+  // ⚠️ IMPORTANT:
+  // This "permission check" is risky if POST /patients/ creates a row.
+  // If you *must* check, use a safe endpoint like /therapist/profile/ or a dedicated /permissions/ endpoint.
+  // For now, we'll only block if we already detected 403 earlier (e.g., from form submit), not by creating data.
+
+  const openAddModal = useCallback(() => {
+    if (profileBlocked) {
+      showProfileAlert();
+      return;
+    }
+    navigate("/patients?add=1", { replace: true });
+  }, [navigate, profileBlocked, showProfileAlert]);
+
+  const closeAddModal = useCallback(() => {
+    navigate("/patients", { replace: true });
+    queryClient.invalidateQueries({ queryKey: qk.patients });
+
+    // refresh sessions too (optional)
+    api
+      .get("/sessions/")
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : data?.results || [];
+        setSessions(list);
+      })
+      .catch(() => {});
+  }, [navigate, queryClient]);
 
   // Fetch sessions once (needed for last session date per patient)
   useEffect(() => {
@@ -53,9 +96,7 @@ export default function PatientsListPage() {
         const list = Array.isArray(data) ? data : data?.results || [];
         setSessions(list);
       })
-      .catch(() => {
-        setSessions([]);
-      });
+      .catch(() => setSessions([]));
   }, []);
 
   // Derived: filter patients by search + gender
@@ -63,36 +104,28 @@ export default function PatientsListPage() {
     const q = search.trim().toLowerCase();
     const g = String(filterGender).toLowerCase();
 
-    return patients.filter((p) => {
+    return (patients || []).filter((p) => {
       const name = String(p.full_name || p.name || "").toLowerCase();
       const gender = String(p.gender || "").toLowerCase();
-
-      const matchSearch = !q || name.includes(q);
-      const matchGender = g === "all" || gender === g;
-
-      return matchSearch && matchGender;
+      return (!q || name.includes(q)) && (g === "all" || gender === g);
     });
   }, [patients, search, filterGender]);
 
-  // Build map: patientId -> latest session datetime (created_at preferred)
+  // Build map: patientId -> latest session datetime
   const lastSessionByPatientId = useMemo(() => {
     const map = new Map();
-
     for (const s of sessions) {
       const pid = s?.patient;
       const dt = s?.created_at || s?.session_date || s?.updated_at || null;
       if (!pid || !dt) continue;
 
       const prev = map.get(pid);
-      if (!prev || new Date(dt) > new Date(prev)) {
-        map.set(pid, dt);
-      }
+      if (!prev || new Date(dt) > new Date(prev)) map.set(pid, dt);
     }
-
     return map;
   }, [sessions]);
 
-  // Enrich filtered patients with last_session_date so PatientsTable can render it
+  // Enrich patients
   const filteredPatientsEnriched = useMemo(() => {
     return filteredPatients.map((p) => ({
       ...p,
@@ -101,35 +134,12 @@ export default function PatientsListPage() {
   }, [filteredPatients, lastSessionByPatientId]);
 
   const totalLabel = useMemo(() => {
-    if (isLoading) return "Loading…";
+    if (isLoading || isFetching) return "Loading…";
     if (error) return "—";
     return `${filteredPatientsEnriched.length} shown`;
-  }, [isLoading, error, filteredPatientsEnriched.length]);
+  }, [isLoading, isFetching, error, filteredPatientsEnriched.length]);
 
-  // Handlers
   const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
-
-  const openAddModal = () => {
-    navigate("/patients?add=1", { replace: true });
-  };
-
-  const handleAddPatient = () => {
-    navigate("/patients?add=1");
-  };
-
-  const closeAddModal = () => {
-    setShowAdd(false);
-    navigate("/patients", { replace: true });
-    queryClient.invalidateQueries({ queryKey: qk.patients });
-    // optional: refresh sessions too so last_session updates after adding sessions elsewhere
-    api
-      .get("/sessions/")
-      .then(({ data }) => {
-        const list = Array.isArray(data) ? data : data?.results || [];
-        setSessions(list);
-      })
-      .catch(() => {});
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -145,23 +155,12 @@ export default function PatientsListPage() {
               </div>
 
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                  Patients
-                </h1>
-                <p className="text-sm text-gray-600">
-                  Manage your patients list.
-                </p>
+                <h1 className="text-2xl font-semibold text-gray-900">Patients</h1>
+                <p className="text-sm text-gray-600">Manage your patients list.</p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Error */}
-        {errorMsg && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {errorMsg}
-          </div>
-        )}
 
         {/* Controls */}
         <PatientsControls
@@ -170,13 +169,15 @@ export default function PatientsListPage() {
           onSearchChange={setSearch}
           filterGender={filterGender}
           onFilterGenderChange={setFilterGender}
-          onAddPatient={handleAddPatient}
+          onAddPatient={openAddModal}
+          addDisabled={profileBlocked}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: qk.patients })}
         />
 
         {/* Table */}
         <PatientsTable
-          loading={isLoading}
-          error={errorMsg}
+          loading={isLoading || isFetching}
+          error={error ? "Failed to load patients." : ""}
           patients={filteredPatientsEnriched}
           onViewProfile={handleViewProfile}
           onClearFilters={() => {
@@ -184,6 +185,7 @@ export default function PatientsListPage() {
             setFilterGender("all");
           }}
           onAddPatient={openAddModal}
+          addDisabled={profileBlocked}
         />
 
         {/* Add Patient Modal */}
@@ -194,7 +196,11 @@ export default function PatientsListPage() {
               onClick={closeAddModal}
             />
             <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-              <AddPatientForm onClose={closeAddModal} />
+              <AddPatientForm
+                onClose={closeAddModal}
+                // If your AddPatientForm detects 403, setProfileBlocked(true) there and call showProfileAlert()
+                // e.g., onPermissionDenied={() => { setProfileBlocked(true); showProfileAlert(); closeAddModal(); }}
+              />
             </div>
           </div>
         )}

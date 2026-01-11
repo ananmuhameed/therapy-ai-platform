@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePatients } from "../../queries/patients";
 import { qk } from "../../queries/queryKeys";
@@ -25,11 +25,19 @@ import { createRecordingChunkSource, uploadRecordingAudio } from "../../services
 export default function SessionPage() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, []);
+
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const queryClient = useQueryClient();
   const streamRef = useRef(null);
+  const [micStream, setMicStream] = useState(null);
 
   // --- State ---
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -43,6 +51,26 @@ export default function SessionPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [finalizeMsg, setFinalizeMsg] = useState("");
+
+  const [recordingMs, setRecordingMs] = useState(0);
+
+  const timerRef = useRef(null);
+  const startedAtRef = useRef(null);     // timestamp when current run started
+  const accumulatedMsRef = useRef(0);    // total ms from previous runs (after pauses)
+
+  const stopMicStream = () => {
+    try {
+      const s = streamRef.current;
+      if (!s) return;
+      s.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    } catch { }
+    streamRef.current = null;
+    setMicStream(null);
+  };
+
   // Fetch patients using React Query
   const { data: patients = [], isLoading: patientsLoading } = usePatients();
 
@@ -52,101 +80,113 @@ export default function SessionPage() {
   // 2) Upload audio to /sessions/:id/upload-audio/ (multipart)
   // 3) navigate to session details
 
-const handleUploadFile = async (patientId, file) => {
-  setIsUploading(true);
-  setUploadError("");
+  const handleUploadFile = async (patientId, file) => {
+    setIsUploading(true);
+    setUploadError("");
 
-  try {
-    // 1) create session (FormData)
-    const { data: session } = await createSessionFormData({ patientId });
+    try {
+      // 1) create session (FormData)
+      const { data: session } = await createSessionFormData({ patientId });
 
-    // 2) upload audio via multipart
-    await uploadFileAudio({
-      sessionId: session.id,
-      file,
-      languageCode: "en",
-      // onProgress: (ratio) => setUploadProgress(Math.round(ratio * 100)),
-    });
+      // 2) upload audio via multipart
+      await uploadFileAudio({
+        sessionId: session.id,
+        file,
+        languageCode: "en",
+        // onProgress: (ratio) => setUploadProgress(Math.round(ratio * 100)),
+      });
 
-    navigate(`/sessions/${session.id}`);
-  } catch (err) {
-    console.error(err);
-    setUploadError(err?.response?.data?.detail || err.message || "Upload failed.");
-  } finally {
-    setIsUploading(false);
-  }
-};
+      navigate(`/sessions/${session.id}`);
+    } catch (err) {
+      console.error(err);
+      setUploadError(err?.response?.data?.detail || err.message || "Upload failed.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
-const startRecording = async () => {
-  if (!selectedPatientId) return;
-  setUploadError("");
-  setIsRecorderVisible(true);
-  setIsRecording(true);
-  setIsPaused(false);
-
-  let stream;
-
-  try {
-    // 1) create session first (so we have sessionId)
-    const { data: session } = await createSessionFormData({ patientId: selectedPatientId });
-
-    // 2) prepare chunk source
-    const source = createRecordingChunkSource();
-
-    // 3) start upload runner (it will wait for chunks)
-    const uploadPromise = uploadRecordingAudio({
-      sessionId: session.id,
-      filename: `recording_${Date.now()}.webm`,
-      languageCode: "en",
-      getNextChunk: source.getNextChunk,
-      onProgressBytes: (bytes) => {
-        // optional: show bytes uploaded
-      },
-    });
-
-    // 4) start recorder
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) source.pushBlob(e.data);
-    };
-
-    recorder.onstop = async () => {
-      try {
-        stream.getTracks().forEach((t) => t.stop());
-      } catch (_) {}
-
-      // Tell uploader we're done so it flushes last part
-      source.markDone();
-
-      try {
-        await uploadPromise; // completes multipart and triggers celery
-        navigate(`/sessions/${session.id}`);
-      } catch (err) {
-        console.error(err);
-        setUploadError(err.message || "Failed to upload recording.");
-      } finally {
-        setIsRecording(false);
-        setIsPaused(false);
-        setIsRecorderVisible(false);
-      }
-    };
-
-    recorder.start(5000); // timeslice: emit blobs every 5s
-  } catch (err) {
-    console.error(err);
-    setUploadError("Microphone access denied or session init failed.");
-    setIsRecording(false);
+  const startRecording = async () => {
+    if (!selectedPatientId) return;
+    setUploadError("");
+    setIsRecorderVisible(true);
+    setIsRecording(true);
     setIsPaused(false);
-    setIsRecorderVisible(false);
-    try { stream?.getTracks()?.forEach((t) => t.stop()); } catch (_) {}
-  }
-};
 
-// ---------LOCAL AUDIO FILE HANDLING-----------
+
+    try {
+      // 1) create session first (so we have sessionId)
+      const { data: session } = await createSessionFormData({ patientId: selectedPatientId });
+
+      // 2) prepare chunk source
+      const source = createRecordingChunkSource();
+
+      // 3) start upload runner (it will wait for chunks)
+      const uploadPromise = uploadRecordingAudio({
+        sessionId: session.id,
+        filename: `recording_${Date.now()}.webm`,
+        languageCode: "en",
+        getNextChunk: source.getNextChunk,
+        onProgressBytes: (bytes) => {
+          // optional: show bytes uploaded
+        },
+      });
+
+      // 4) start recorder
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      setMicStream(stream);
+
+      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = recorder;
+
+      resetTimer();
+      startTimer();
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) source.pushBlob(e.data);
+      };
+
+      recorder.onstop = async () => {
+        // stop mic asap
+        // try { stream.getTracks().forEach((t) => t.stop()); } catch { }
+        stopMicStream();
+
+        // tell uploader we're done so no more chunks are coming
+        source.markDone();
+
+        try {
+          // keep overlay visible while uploading/completing multipart
+          await uploadPromise;
+
+          navigate(`/sessions/${session.id}`);
+          resetTimer();
+
+        } catch (err) {
+          console.error(err);
+          setUploadError(err.message || "Failed to upload recording.");
+
+          // If upload fails, bring the UI back (optional)
+          setIsRecorderVisible(true);
+        } finally {
+          setIsRecording(false);
+          setIsPaused(false);
+          setIsFinalizing(false); // hide overlay
+        }
+      };
+
+      recorder.start(5000); // timeslice: emit blobs every 5s
+    } catch (err) {
+      console.error(err);
+      setUploadError("Microphone access denied or session init failed.");
+      setIsRecording(false);
+      setIsPaused(false);
+      setIsRecorderVisible(false);
+      // try { stream?.getTracks()?.forEach((t) => t.stop()); } catch (_) { }
+      stopMicStream();
+    }
+  };
+
+
   // const handleUploadFile = async (patientId, file) => {
   //   if (!patientId || !file) return;
 
@@ -267,11 +307,39 @@ const startRecording = async () => {
   // Stop recording
   const stopRecording = () => {
     const r = mediaRecorderRef.current;
-    if (!r || r.state === "inactive") return;
+    if (!r || r.state === "inactive") {
+      stopMicStream();
+      return;
+    }
+    // Immediately hide recorder/playback UI and show loading overlay
+    stopMicStream();
+    setMicStream(null);
+
+    setIsFinalizing(true);
+    setFinalizeMsg("Session recorded successfully. Please wait...");
+    setIsRecorderVisible(false);
+    setIsPaused(false);
+    pauseTimer();
+
     try {
-      r.stop(); // triggers onstop → upload
-    } catch {}
+      // Forces a final dataavailable chunk ASAP (helps reduce “waiting” feel)
+      if (r.state === "recording") r.requestData();
+    } catch { }
+
+    try {
+      r.stop(); // triggers onstop (upload + navigate)
+    } catch { }
   };
+
+  useEffect(() => {
+    return () => {
+      try {
+        const r = mediaRecorderRef.current;
+        if (r && r.state !== "inactive") r.stop();
+      } catch { }
+      stopMicStream();
+    };
+  }, []);
 
   // Pause recording
   const pauseRecording = () => {
@@ -280,7 +348,8 @@ const startRecording = async () => {
       try {
         r.pause();
         setIsPaused(true);
-      } catch {}
+        pauseTimer();
+      } catch { }
     }
   };
 
@@ -291,7 +360,8 @@ const startRecording = async () => {
       try {
         r.resume();
         setIsPaused(false);
-      } catch {}
+        startTimer();
+      } catch { }
     }
   };
 
@@ -326,6 +396,39 @@ const startRecording = async () => {
     if (!fileInputRef.current) return;
     fileInputRef.current.value = ""; // allow same file selection again
     fileInputRef.current.click();
+  };
+
+  const startTimer = () => {
+    if (timerRef.current) return;
+    startedAtRef.current = Date.now();
+
+    timerRef.current = setInterval(() => {
+      const now = Date.now();
+      const runMs = now - (startedAtRef.current ?? now);
+      setRecordingMs(accumulatedMsRef.current + runMs);
+    }, 250); // smooth enough, cheap
+  };
+
+  const pauseTimer = () => {
+    if (!timerRef.current) return;
+
+    const now = Date.now();
+    const runMs = now - (startedAtRef.current ?? now);
+    accumulatedMsRef.current += runMs;
+
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    startedAtRef.current = null;
+
+    setRecordingMs(accumulatedMsRef.current);
+  };
+
+  const resetTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+    startedAtRef.current = null;
+    accumulatedMsRef.current = 0;
+    setRecordingMs(0);
   };
 
   return (
@@ -383,7 +486,25 @@ const startRecording = async () => {
             onPause={pauseRecording}
             onResume={resumeRecording}
             isUploading={isUploading}
+            recordingMs={recordingMs}
+            micStream={micStream}
+            
           />
+        )}
+
+        {isFinalizing && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl px-6 py-5 w-full max-w-md text-center">
+                <div className="text-lg font-semibold">Session recorded successfully</div>
+                <div className="text-sm text-gray-600 mt-2">Please wait...</div>
+                <div className="mt-4">
+                  {/* your spinner */}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </main>
 

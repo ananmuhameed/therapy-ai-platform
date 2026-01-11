@@ -32,7 +32,7 @@ class WhisperTranscriptionService(BaseTranscriptionService):
         self._client = OpenAI(api_key=api_key)
         return self._client
 
-    def transcribe(self, audio_path: str, language: str = "en") -> Dict:
+    def transcribe(self, audio_path: str, language: str = "ar") -> Dict:
         if not audio_path:
             raise ValueError("audio_path is required")
 
@@ -44,7 +44,7 @@ class WhisperTranscriptionService(BaseTranscriptionService):
             response = client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
-                language=language,
+                language="ar",
             )
 
         raw_text = (response.text or "").strip()
