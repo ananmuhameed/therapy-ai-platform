@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
+
 from .serializers import UserPublicSerializer
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -56,9 +57,9 @@ class LoginView(APIView):
         access = str(refresh.access_token)
 
         if remember_me:
-            max_age = 365 * 24 * 60 * 60   # 30 days
+            max_age = settings.REMEMBER_ME_REFRESH_AGE  # 30 days
         else:
-            max_age = 24 * 60 * 60        # 1 day
+            max_age = settings.DEFAULT_REFRESH_AGE  # 1 day
 
         resp = Response(
             {"access": access, "user": UserPublicSerializer(user).data},
@@ -82,8 +83,11 @@ class CookieTokenRefreshView(TokenRefreshView):
         # If rotate refresh is enabled, SimpleJWT returns a new refresh in response.data["refresh"]
         new_refresh = response.data.get("refresh")
         if new_refresh:
-            set_refresh_cookie(response, new_refresh)
-            # Never expose refresh to JS
+            set_refresh_cookie(
+                response,
+                new_refresh,
+                max_age=settings.DEFAULT_REFRESH_AGE
+            )
             del response.data["refresh"]
 
         return response

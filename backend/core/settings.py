@@ -101,6 +101,8 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 
 }
+REMEMBER_ME_REFRESH_AGE = 365 * 24 * 60 * 60
+DEFAULT_REFRESH_AGE = 24 * 60 * 60
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
