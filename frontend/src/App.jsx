@@ -21,6 +21,7 @@ import VerifyEmail from "./pages/VerifyEmai/VerifyEmail";
 import { Suspense } from "react";
  const Home = React.lazy(() => import("../Home/pages/Home/Home"));
  import LandingLayout from "../Home/Layout/Landinglayout";
+ import FeaturesPage from "../Home/pages/Features/FeaturesPage";
 
 function App() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ function App() {
       <Routes>
         <Route element={<LandingLayout />}>
         <Route path="/" element={<Navigate to="/home" />} />
-        
+        <Route path="/features" element={<FeaturesPage />} />
        
         <Route path="/home" element={<Home />} />
         </Route>

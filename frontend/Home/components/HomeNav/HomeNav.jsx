@@ -74,11 +74,11 @@ const HomeNav = () => {
 
       {/* Links */}
       <div className="flex items-center gap-12">
-        <NavLink to="/" className={linkClasses}>
+        <NavLink to="/home" className={linkClasses}>
           Home
         </NavLink>
 
-        <NavLink to="/" className={linkClasses}>
+        <NavLink to="/features" className={linkClasses}>
           Features
         </NavLink>
 
