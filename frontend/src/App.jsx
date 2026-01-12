@@ -17,9 +17,7 @@ import ReportsPage from "./pages/Report/ReportsPage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import VerifyEmail from "./pages/VerifyEmai/VerifyEmail";
-//lazy load home page
-import { Suspense } from "react";
- const Home = React.lazy(() => import("../Home/pages/Home/Home"));
+import Home from "../Home/pages/Home/Home";
  import LandingLayout from "../Home/Layout/Landinglayout";
  import FeaturesPage from "../Home/pages/Features/FeaturesPage";
 import Plans from "../Home/pages/Plans/Plans";
@@ -38,8 +36,6 @@ function App() {
         <Route path="/" element={<Navigate to="/home" />} />
         <Route path="/features" element={<FeaturesPage />} />
         <Route path="/plans" element={<Plans />} />
-     
-       
         <Route path="/home" element={<Home />} />
         </Route>
         <Route path="/signup" element={<Signup />} />

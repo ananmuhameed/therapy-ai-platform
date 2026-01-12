@@ -100,7 +100,7 @@ export default function Dashboard() {
           api.get("/dashboard/"),
           api.get("/sessions/"),
           api.get("/patients/"),
-          api.get("/therapist/profile/"), // ✅ source of truth
+          api.get("/therapist/profile/"), 
         ]);
 
         setUser(meRes.data);
@@ -123,7 +123,7 @@ export default function Dashboard() {
     const now = new Date();
     const start = new Date(now);
 
-    const day = (start.getDay() + 6) % 7; // Mon=0 ... Sun=6
+    const day = (start.getDay() + 6) % 7; 
     start.setDate(start.getDate() - day);
     start.setHours(0, 0, 0, 0);
 
