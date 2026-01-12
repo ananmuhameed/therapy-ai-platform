@@ -1,6 +1,11 @@
+import { Navigate } from "react-router-dom"
 import FadeUp from "../../Layout/Fadeup"
+import { useNavigate } from "react-router-dom";
+
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <>
     <FadeUp delay={0.3}>
@@ -18,10 +23,16 @@ const Hero = () => {
          transcripts and structured reports.
          </p>
          <div className='flex gap-4 mt-8'>
-        <button className="px-6 py-3 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition">
-           Get started Free
-        </button>
-        <button className=' px-6 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 transition p-2'>
+       <button
+              onClick={() => navigate("/signup")}
+              className="px-6 py-3 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 transition"
+            >
+              Get started Free
+            </button>
+
+        <button
+          onClick={() => navigate("/plans")}
+          className=' px-6 rounded-2xl bg-gray-100 text-gray-800 hover:bg-gray-200 transition p-2'>
          Discover Paid Plans
         </button>
          </div>

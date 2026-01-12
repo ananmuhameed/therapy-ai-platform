@@ -51,6 +51,9 @@ const features = [
 
 export default function FeaturesPage() {
   return (
+     <div className="min-h-screen px-6 py-20 bg-gradient-to-b from-slate-50 to-white text-black relative overflow-hidden">
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-200/40 rounded-full blur-3xl" />
+      <div className="absolute top-1/3 -right-40 w-[400px] h-[400px] bg-blue-100/50 rounded-full blur-3xl" />
     <div className="min-h-screen px-6 py-20 bg-gradient-to-b from-slate-50 to-white text-black">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
@@ -117,36 +120,10 @@ export default function FeaturesPage() {
           })}
         </div>
 
-        {/* CTA Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-32 rounded-3xl p-12 text-center backdrop-blur-xl border bg-white/70 border-black/5"
-        >
-          <h2 className="text-3xl font-bold mb-4">Start Using AI Today</h2>
-          <p className="mb-8 max-w-xl mx-auto text-gray-600">
-            Automate documentation, gain insights, and improve patient care with
-            our AI-powered tools.
-          </p>
-
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <a
-              href="/signup"
-              className="px-8 py-3 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition"
-            >
-              Start Free Trial
-            </a>
-            <a
-              href="/demo"
-              className="px-8 py-3 rounded-full border border-black/10 hover:bg-black/5 transition"
-            >
-              Subscripe now
-            </a>
-          </div>
-        </motion.div>
+        
       </div>
     </div>
+    </div>
+    
   );
 }

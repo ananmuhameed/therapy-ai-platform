@@ -22,7 +22,8 @@ import { Suspense } from "react";
  const Home = React.lazy(() => import("../Home/pages/Home/Home"));
  import LandingLayout from "../Home/Layout/Landinglayout";
  import FeaturesPage from "../Home/pages/Features/FeaturesPage";
-
+import Plans from "../Home/pages/Plans/Plans";
+import Checkout from "../Home/pages/Plans/checkout";
 function App() {
   const navigate = useNavigate();
 
@@ -36,6 +37,8 @@ function App() {
         <Route element={<LandingLayout />}>
         <Route path="/" element={<Navigate to="/home" />} />
         <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/plans" element={<Plans />} />
+        <Route path="/checkout" element={<Checkout />} />
        
         <Route path="/home" element={<Home />} />
         </Route>

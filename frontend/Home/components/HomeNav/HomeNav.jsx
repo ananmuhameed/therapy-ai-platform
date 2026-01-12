@@ -66,14 +66,14 @@ const HomeNav = () => {
   const toggleLang = () => setLang((l) => (l === "en" ? "ar" : "en"));
 
   return (
-    <nav className="w-full bg-white dark:bg-slate-900 px-8 py-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+    <nav className="w-full bg-white dark:bg-slate-900 px-10 py-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
       {/* Logo */}
       <div className="flex items-center">
         <RiMentalHealthLine className="text-[#3078E2]" size={36} />
       </div>
 
       {/* Links */}
-      <div className="flex items-center gap-12">
+      <div className="flex items-center gap-12 ml-20">
         <NavLink to="/home" className={linkClasses}>
           Home
         </NavLink>
@@ -82,7 +82,7 @@ const HomeNav = () => {
           Features
         </NavLink>
 
-        <NavLink to="/" className={linkClasses}>
+        <NavLink to="/plans" className={linkClasses}>
           Pricing
         </NavLink>
       </div>
