@@ -42,7 +42,8 @@ export function toSignupPayload(values) {
     last_name,
     email: String(values.email || "").trim(),
     password: values.password,
-    password_confirm: values.confirmPassword, // ✅ FIX
+    password_confirm: values.confirmPassword, 
+    remember_me: values.remember_me,
   };
 }
 
@@ -50,6 +51,7 @@ export function toLoginPayload(values) {
   return {
     email: String(values.email || "").trim(),
     password: values.password,
+      remember_me: values.remember_me,
   };
 }
 
