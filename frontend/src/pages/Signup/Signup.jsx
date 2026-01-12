@@ -23,6 +23,7 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
   const { formik, apiError } = useAppFormik({
     initialValues: {
@@ -36,13 +37,13 @@ export default function Signup() {
 
     onSubmit: async (values) => {
       setMessage("");
-
+      setMessageType("");
       try {
         const payload = toSignupPayload(values);
         console.log("REGISTER PAYLOAD:", payload);
-
         await raw.post("/auth/register/", payload);
 
+        setMessageType("success");
         setMessage(
           "Account created successfully. Please check your email to verify your account."
         );
@@ -53,8 +54,11 @@ export default function Signup() {
       } catch (error) {
         console.error("REGISTER ERROR:", error.response?.data);
 
+        setMessageType("error");
+
         if (error.response?.data) {
           formik.setErrors(mapAuthFieldErrors(error.response.data));
+          setMessage("Registration failed. Please try again.");
         } else {
           setMessage("Registration failed. Please try again.");
         }
@@ -77,10 +81,12 @@ export default function Signup() {
         navigate("/dashboard", { replace: true });
       } catch (err) {
         console.error(err);
+        setMessageType("error");
         setMessage("Google login failed. Please try again.");
       }
     },
     onError: () => {
+      setMessageType("error");
       setMessage("Google login failed.");
     },
   });
@@ -107,11 +113,15 @@ export default function Signup() {
       </p>
 
       {/* Server / global messages */}
-      {apiError && (
-        <p className="mb-4 text-red-500 font-medium">{apiError}</p>
-      )}
+      {apiError && <p className="mb-4 text-red-500 font-medium">{apiError}</p>}
       {message && (
-        <p className="mb-4 text-green-600 font-medium">{message}</p>
+        <p
+          className={`mb-4 font-medium ${
+            messageType === "error" ? "text-red-500" : "text-green-600"
+          }`}
+        >
+          {message}
+        </p>
       )}
 
       <form onSubmit={formik.handleSubmit} className="space-y-5">
@@ -149,9 +159,7 @@ export default function Signup() {
             autoComplete="email"
           />
           {formik.touched.email && formik.errors.email && (
-            <p className="mt-1 text-sm text-red-500">
-              {formik.errors.email}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{formik.errors.email}</p>
           )}
         </div>
 
@@ -198,12 +206,11 @@ export default function Signup() {
             placeholder="••••••••"
             autoComplete="new-password"
           />
-          {formik.touched.confirmPassword &&
-            formik.errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-500">
-                {formik.errors.confirmPassword}
-              </p>
-            )}
+          {formik.touched.confirmPassword && formik.errors.confirmPassword && (
+            <p className="mt-1 text-sm text-red-500">
+              {formik.errors.confirmPassword}
+            </p>
+          )}
         </div>
 
         <button

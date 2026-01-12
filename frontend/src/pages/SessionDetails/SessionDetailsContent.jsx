@@ -1,24 +1,25 @@
-import React from "react";
 import { Loader2, UploadCloud } from "lucide-react";
-
 import AudioPlayer from "../../components/SessionDetails/AudioPlayer";
 import TranscriptionBlock from "../../components/SessionDetails/TranscriptionBlock";
 import ReportSummary from "../../components/Reports/ReportSummary";
-
 export default function SessionDetailsContent({
   sessionId,
   session,
   audioUrl,
   hasAudio,
-
   uploadError,
   isUploadingAudio,
   onPickAudio,
   onAudioSelected,
   fileInputRef,
-
   transcriptItems,
+  onDeleteSession,
 }) {
+  if (!session) {
+    // Optionally, render a loading state if session is not yet loaded
+    return <div>Loading...</div>;
+  }
+
   return (
     <main className="flex flex-col items-center max-w-4xl mx-auto gap-8 pb-20">
       {/* AUDIO */}
@@ -99,6 +100,16 @@ export default function SessionDetailsContent({
           <ReportSummary report={session.report} />
         </div>
       )}
+
+      {/* DELETE */}
+      <div className="flex justify-center mt-6">
+        <button
+          onClick={() => onDeleteSession(sessionId)}
+          className="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-md transition font-medium text-sm hover:bg-red-700"
+        >
+          Delete Session
+        </button>
+      </div>
     </main>
   );
 }

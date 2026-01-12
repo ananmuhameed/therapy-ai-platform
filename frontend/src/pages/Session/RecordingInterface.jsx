@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { BsStopFill, BsPauseFill, BsPlayFill } from "react-icons/bs";
 import Waveform from "../../components/Waveform";
-import stream from "./SessionPage.jsx";
 
 export default function RecordingInterface({
   isRecording,
   isPaused,
   onStop,
+  onCancel,
   onPause,
   onResume,
   isUploading = false, // optional safety
@@ -42,6 +42,12 @@ export default function RecordingInterface({
     onResume?.();
   };
 
+  const handleCancel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isUploading) return; // optional
+    onCancel?.();
+  };
 
   const formatMs = (ms) => {
     const totalSec = Math.floor(ms / 1000);
@@ -58,7 +64,9 @@ export default function RecordingInterface({
           type="button"
           onClick={handleStop}
           disabled={!isRecording || isUploading}
-          className={`${ctrlBtn} ${(!isRecording || isUploading) ? disabled : ""}`}
+          className={`${ctrlBtn} ${
+            !isRecording || isUploading ? disabled : ""
+          }`}
           title="Stop & save recording"
         >
           <BsStopFill size={20} />
@@ -69,7 +77,9 @@ export default function RecordingInterface({
             type="button"
             onClick={handlePause}
             disabled={!isRecording || isUploading}
-            className={`${ctrlBtn} ${(!isRecording || isUploading) ? disabled : ""}`}
+            className={`${ctrlBtn} ${
+              !isRecording || isUploading ? disabled : ""
+            }`}
             title="Pause"
           >
             <BsPauseFill size={22} />
@@ -86,6 +96,15 @@ export default function RecordingInterface({
           </button>
         )}
       </div>
+
+      <button
+        type="button"
+        onClick={handleCancel}
+        disabled={isUploading}
+        className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition disabled:opacity-60"
+      >
+        Cancel
+      </button>
 
       {/* Visualizer + counter */}
       <div className="flex-1 h-full flex items-center gap-3 overflow-hidden min-w-0">

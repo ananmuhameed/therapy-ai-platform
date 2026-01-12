@@ -19,8 +19,10 @@ import RecordingInterface from "./RecordingInterface";
 
 import { uploadFileAudio } from "../../services/uploadFileAudio";
 import { createSessionFormData } from "../../api/sessions";
-import { createRecordingChunkSource, uploadRecordingAudio } from "../../services/uploadRecordingAudio";
-
+import {
+  createRecordingChunkSource,
+  uploadRecordingAudio,
+} from "../../services/uploadRecordingAudio";
 
 export default function SessionPage() {
   const navigate = useNavigate();
@@ -38,6 +40,9 @@ export default function SessionPage() {
   const queryClient = useQueryClient();
   const streamRef = useRef(null);
   const [micStream, setMicStream] = useState(null);
+  const currentSessionIdRef = useRef(null);
+  const cancelUploadRef = useRef(null); // function to cancel the upload runner
+  const sourceRef = useRef(null); // chunk source instance
 
   // --- State ---
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -57,8 +62,8 @@ export default function SessionPage() {
   const [recordingMs, setRecordingMs] = useState(0);
 
   const timerRef = useRef(null);
-  const startedAtRef = useRef(null);     // timestamp when current run started
-  const accumulatedMsRef = useRef(0);    // total ms from previous runs (after pauses)
+  const startedAtRef = useRef(null); // timestamp when current run started
+  const accumulatedMsRef = useRef(0); // total ms from previous runs (after pauses)
 
   const stopMicStream = () => {
     try {
@@ -66,7 +71,7 @@ export default function SessionPage() {
       if (!s) return;
       s.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-    } catch { }
+    } catch {}
     streamRef.current = null;
     setMicStream(null);
   };
@@ -99,7 +104,9 @@ export default function SessionPage() {
       navigate(`/sessions/${session.id}`);
     } catch (err) {
       console.error(err);
-      setUploadError(err?.response?.data?.detail || err.message || "Upload failed.");
+      setUploadError(
+        err?.response?.data?.detail || err.message || "Upload failed."
+      );
     } finally {
       setIsUploading(false);
     }
@@ -107,29 +114,34 @@ export default function SessionPage() {
 
   const startRecording = async () => {
     if (!selectedPatientId) return;
+
     setUploadError("");
     setIsRecorderVisible(true);
     setIsRecording(true);
     setIsPaused(false);
 
-
     try {
       // 1) create session first (so we have sessionId)
-      const { data: session } = await createSessionFormData({ patientId: selectedPatientId });
+      const { data: session } = await createSessionFormData({
+        patientId: selectedPatientId,
+      });
 
-      // 2) prepare chunk source
+      currentSessionIdRef.current = session.id;
+
+      // 2) prepare chunk source ✅ (THIS was missing)
       const source = createRecordingChunkSource();
+      sourceRef.current = source;
 
-      // 3) start upload runner (it will wait for chunks)
-      const uploadPromise = uploadRecordingAudio({
+      // 3) start upload runner (promise + cancel)
+      const { promise, cancel } = uploadRecordingAudio({
         sessionId: session.id,
         filename: `recording_${Date.now()}.webm`,
         languageCode: "en",
         getNextChunk: source.getNextChunk,
-        onProgressBytes: (bytes) => {
-          // optional: show bytes uploaded
-        },
       });
+
+      cancelUploadRef.current = cancel;
+      const uploadPromise = promise;
 
       // 4) start recorder
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -147,45 +159,36 @@ export default function SessionPage() {
       };
 
       recorder.onstop = async () => {
-        // stop mic asap
-        // try { stream.getTracks().forEach((t) => t.stop()); } catch { }
         stopMicStream();
 
-        // tell uploader we're done so no more chunks are coming
+        // tell uploader no more chunks are coming
         source.markDone();
 
         try {
-          // keep overlay visible while uploading/completing multipart
           await uploadPromise;
-
           navigate(`/sessions/${session.id}`);
           resetTimer();
-
         } catch (err) {
           console.error(err);
           setUploadError(err.message || "Failed to upload recording.");
-
-          // If upload fails, bring the UI back (optional)
           setIsRecorderVisible(true);
         } finally {
           setIsRecording(false);
           setIsPaused(false);
-          setIsFinalizing(false); // hide overlay
+          setIsFinalizing(false);
         }
       };
 
-      recorder.start(5000); // timeslice: emit blobs every 5s
+      recorder.start(5000);
     } catch (err) {
       console.error(err);
       setUploadError("Microphone access denied or session init failed.");
       setIsRecording(false);
       setIsPaused(false);
       setIsRecorderVisible(false);
-      // try { stream?.getTracks()?.forEach((t) => t.stop()); } catch (_) { }
       stopMicStream();
     }
   };
-
 
   // const handleUploadFile = async (patientId, file) => {
   //   if (!patientId || !file) return;
@@ -304,16 +307,55 @@ export default function SessionPage() {
   //   }
   // };
 
+  // cancel recording
+  const cancelRecording = async () => {
+    // stop UI immediately
+    setIsFinalizing(false);
+    setFinalizeMsg("");
+    setIsRecorderVisible(false);
+    setIsRecording(false);
+    setIsPaused(false);
+    setUploadError("");
+    resetTimer();
+
+    // stop recorder
+    const r = mediaRecorderRef.current;
+    try {
+      if (r && r.state !== "inactive") {
+        r.ondataavailable = null;
+        r.onstop = null;
+        r.stop();
+      }
+    } catch {}
+
+    stopMicStream();
+    try {
+      sourceRef.current?.markDone?.();
+    } catch {}
+    try {
+      cancelUploadRef.current?.();
+    } catch {}
+
+    //cleanup backend session
+    const sid = currentSessionIdRef.current;
+    mediaRecorderRef.current = null;
+    sourceRef.current = null;
+    cancelUploadRef.current = null;
+    currentSessionIdRef.current = null;
+
+    if (sid) {
+      try {
+        await api.delete(`/sessions/${sid}/`);
+      } catch (e) {
+        console.warn("Failed to delete canceled session", e);
+      }
+    }
+  };
+
   // Stop recording
   const stopRecording = () => {
     const r = mediaRecorderRef.current;
-    if (!r || r.state === "inactive") {
-      stopMicStream();
-      return;
-    }
-    // Immediately hide recorder/playback UI and show loading overlay
-    stopMicStream();
-    setMicStream(null);
+    if (!r || r.state === "inactive") return;
 
     setIsFinalizing(true);
     setFinalizeMsg("Session recorded successfully. Please wait...");
@@ -322,13 +364,12 @@ export default function SessionPage() {
     pauseTimer();
 
     try {
-      // Forces a final dataavailable chunk ASAP (helps reduce “waiting” feel)
       if (r.state === "recording") r.requestData();
-    } catch { }
+    } catch {}
 
     try {
-      r.stop(); // triggers onstop (upload + navigate)
-    } catch { }
+      r.stop();
+    } catch {}
   };
 
   useEffect(() => {
@@ -336,7 +377,7 @@ export default function SessionPage() {
       try {
         const r = mediaRecorderRef.current;
         if (r && r.state !== "inactive") r.stop();
-      } catch { }
+      } catch {}
       stopMicStream();
     };
   }, []);
@@ -349,7 +390,7 @@ export default function SessionPage() {
         r.pause();
         setIsPaused(true);
         pauseTimer();
-      } catch { }
+      } catch {}
     }
   };
 
@@ -361,7 +402,7 @@ export default function SessionPage() {
         r.resume();
         setIsPaused(false);
         startTimer();
-      } catch { }
+      } catch {}
     }
   };
 
@@ -464,7 +505,9 @@ export default function SessionPage() {
 
         {uploadSuccess && (
           <div className="mt-2 flex flex-col items-center gap-1">
-            <p className="text-green-600 font-medium text-sm">{uploadSuccess}</p>
+            <p className="text-green-600 font-medium text-sm">
+              {uploadSuccess}
+            </p>
             {lastSessionId && (
               <button
                 type="button"
@@ -483,12 +526,12 @@ export default function SessionPage() {
             isRecording={isRecording}
             isPaused={isPaused}
             onStop={stopRecording}
+            onCancel={cancelRecording}
             onPause={pauseRecording}
             onResume={resumeRecording}
             isUploading={isUploading}
             recordingMs={recordingMs}
             micStream={micStream}
-            
           />
         )}
 
@@ -497,11 +540,11 @@ export default function SessionPage() {
             <div className="absolute inset-0 bg-black/40" />
             <div className="relative z-10 flex min-h-full items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl px-6 py-5 w-full max-w-md text-center">
-                <div className="text-lg font-semibold">Session recorded successfully</div>
-                <div className="text-sm text-gray-600 mt-2">Please wait...</div>
-                <div className="mt-4">
-                  {/* your spinner */}
+                <div className="text-lg font-semibold">
+                  Session recorded successfully
                 </div>
+                <div className="text-sm text-gray-600 mt-2">Please wait...</div>
+                <div className="mt-4">{/* your spinner */}</div>
               </div>
             </div>
           </div>

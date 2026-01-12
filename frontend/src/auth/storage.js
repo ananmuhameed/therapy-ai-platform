@@ -1,16 +1,19 @@
 import api from "../api/axiosInstance";
 import { redirectToLogin } from "./navigation";
 
-let accessToken = null;
+const ACCESS_KEY = "accessToken";
 
 export const setAccessToken = (token) => {
-  accessToken = token;
+  if (token) localStorage.setItem(ACCESS_KEY, token);
+  else localStorage.removeItem(ACCESS_KEY);
 };
 
-export const getAccessToken = () => accessToken;
+export const getAccessToken = () => {
+  return localStorage.getItem(ACCESS_KEY);
+};
 
 export const clearAccessToken = () => {
-  accessToken = null;
+  localStorage.removeItem(ACCESS_KEY);
 };
 
 export const setUser = (user) => {

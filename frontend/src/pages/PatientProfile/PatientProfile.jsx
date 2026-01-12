@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
-import { formatDate, classNames } from "../../utils/helpers";
+import { formatDate, classNames, handleDeleteSession } from "../../utils/helpers";
 
 // Icons
 import { FiArrowLeft, FiEdit, FiTrash2, FiCheck, FiX } from "react-icons/fi";
@@ -19,7 +19,7 @@ import { toast } from "react-toastify";
 export default function PatientProfile() {
   const navigate = useNavigate();
   const { patientId } = useParams();
-
+  
   // --- State ---
   const [isEditing, setIsEditing] = useState(false);
   const [patient, setPatient] = useState({
@@ -71,8 +71,12 @@ export default function PatientProfile() {
           const filtered = allSessions
             .filter((s) => Number(s.patient) === pid)
             .sort((a, b) => {
-              const ta = new Date(a?.session_date || a?.created_at || 0).getTime();
-              const tb = new Date(b?.session_date || b?.created_at || 0).getTime();
+              const ta = new Date(
+                a?.session_date || a?.created_at || 0
+              ).getTime();
+              const tb = new Date(
+                b?.session_date || b?.created_at || 0
+              ).getTime();
               return tb - ta;
             });
 
@@ -100,6 +104,10 @@ export default function PatientProfile() {
 
     if (patientId) fetchPatientAndSessions();
   }, [patientId]);
+
+   const handleDeleteSessionFromPatientProfile = (sessionId) => {
+    handleDeleteSession(sessionId, setSessions); // use delete hook
+  };
 
   // --- Helpers ---
   const sessionsRows = useMemo(() => {
@@ -153,7 +161,6 @@ export default function PatientProfile() {
       setIsEditing(false);
       return;
     }
-
     const res = await Swal.fire({
       title: "Discard changes?",
       text: "Your unsaved changes will be lost.",
@@ -302,7 +309,11 @@ export default function PatientProfile() {
         />
 
         {/* 2. Contact Card */}
-        <ContactCard patient={patient} isEditing={isEditing} onChange={handleChange} />
+        <ContactCard
+          patient={patient}
+          isEditing={isEditing}
+          onChange={handleChange}
+        />
 
         {/* 3. Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -311,15 +322,21 @@ export default function PatientProfile() {
             loading={sessionsLoading}
             error={sessionsError}
             onOpenSession={(id) => navigate(`/sessions/${id}`)}
+            onDeleteSession={handleDeleteSessionFromPatientProfile}
           />
 
-          <NotesCard notes={patient.notes} isEditing={isEditing} onChange={handleChange} />
+          <NotesCard
+            notes={patient.notes}
+            isEditing={isEditing}
+            onChange={handleChange}
+          />
         </div>
 
         {/* Bottom hint */}
         {isEditing && (
           <div className="mt-6 text-xs text-gray-500">
-            Tip: Don’t forget to hit <span className="font-semibold">Save</span>.
+            Tip: Don’t forget to hit <span className="font-semibold">Save</span>
+            .
           </div>
         )}
       </div>

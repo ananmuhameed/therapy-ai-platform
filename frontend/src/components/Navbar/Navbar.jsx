@@ -90,7 +90,7 @@ const Navbar = () => {
     if (!result.isConfirmed) return;
 
     await logout();
-    navigate("/login");
+    // navigate("/login");
   };
 
   const toggleTheme = () =>

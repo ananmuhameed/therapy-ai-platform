@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { ShieldCheck } from "lucide-react";
 import api from "../../api/axiosInstance";
-import { getUser, logout } from "../../auth/storage";
+import { getUser, logout, setUser } from "../../auth/storage";
 import { useNavigate } from "react-router-dom";
 import { useAppFormik } from "../../Forms/useAppFormik";
+
 import {
   therapistProfileSchema,
   toTherapistProfilePayload,
@@ -70,7 +71,6 @@ export default function TherapistProfile() {
           country: data.country || "",
           yearsExperience: data.years_experience || "",
         };
-
         formik.setValues(nextValues);
         setSavedValues(nextValues);
 
@@ -114,6 +114,9 @@ export default function TherapistProfile() {
 
       if (apiError) return false;
 
+      const { data: me } = await api.get("/auth/me/");
+      setUser(me);
+
       setSavedValues(formik.values);
       setIsEditing(false);
       toast.success("Profile saved successfully");
@@ -122,6 +125,7 @@ export default function TherapistProfile() {
       setIsSaving(false);
     }
   };
+
 
   const handleCancel = async () => {
     if (!formik.dirty) {

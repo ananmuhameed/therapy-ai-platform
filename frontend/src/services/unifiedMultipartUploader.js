@@ -1,83 +1,137 @@
-import { 
-    startSessionAudioMultipart,
-    presignSessionAudioPart,
-    completeSessionAudioMultipart,
-    abortSessionAudioMultipart } from "../api/SessionAudioMultipart";
+import {
+  startSessionAudioMultipart,
+  presignSessionAudioPart,
+  completeSessionAudioMultipart,
+  abortSessionAudioMultipart,
+} from "../api/SessionAudioMultipart";
 import { uploadPartToS3 } from "../utils/s3MultipartUpload";
 
 const MIN_S3_PART_BYTES = 6 * 1024 * 1024; // must be >= 5MB except last
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    const err = new Error("Upload cancelled");
+    err.name = "AbortError";
+    throw err;
+  }
+}
+
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted)
+      return reject(
+        Object.assign(new Error("Upload cancelled"), { name: "AbortError" })
+      );
+
+    const id = setTimeout(resolve, ms);
+
+    if (signal) {
+      const onAbort = () => {
+        clearTimeout(id);
+        reject(
+          Object.assign(new Error("Upload cancelled"), { name: "AbortError" })
+        );
+      };
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+  });
+}
 
 /**
  * Unified multipart upload runner.
  * - getNextChunk(): returns { blob, isLast } OR null if not ready yet
  * - onProgress(bytesUploaded) optional
- *
- * For file upload: getNextChunk returns immediately until done.
- * For recording: getNextChunk is driven by MediaRecorder pushing blobs into a buffer.
  */
 export async function uploadMultipartUnified({
-    sessionId,
-    filename,
-    contentType,
-    languageCode,
-    getNextChunk,
-    onProgress,
-    maxRetriesPerPart = 3,
+  sessionId,
+  filename,
+  contentType,
+  languageCode,
+  getNextChunk,
+  onProgress,
+  maxRetriesPerPart = 3,
+  signal,
 }) {
-    const { uploadId } = await startSessionAudioMultipart(sessionId, { filename, contentType });
+  throwIfAborted(signal);
 
-    const parts = [];
-    let partNumber = 1;
-    let uploadedBytes = 0;
+  const { uploadId } = await startSessionAudioMultipart(
+    sessionId,
+    { filename, contentType },
+    { signal }
+  );
 
-    try {
-        while (true) {
-            const next = await getNextChunk();
-            if (!next) {
-                // recording flow: not ready yet, wait a bit
-                await new Promise((r) => setTimeout(r, 200));
-                continue;
-            }
+  const parts = [];
+  let partNumber = 1;
+  let uploadedBytes = 0;
 
-            const { blob, isLast } = next;
+  try {
+    while (true) {
+      throwIfAborted(signal);
 
-            // Enforce multipart rule: all parts except last must be >=5MB
-            if (!isLast && blob.size < MIN_S3_PART_BYTES) {
-                // this should not happen if your recording buffer logic is correct
-                // but we’ll be defensive: wait for more data
-                await new Promise((r) => setTimeout(r, 200));
-                continue;
-            }
+      const next = await getNextChunk();
+      if (next?.done) break;
+      if (!next) {
+        await sleep(200, signal);
+        continue;
+      }
 
-            const { url } = await presignSessionAudioPart(sessionId, { uploadId, partNumber });
+      const { blob, isLast } = next;
 
-            let etag = null;
-            for (let attempt = 1; attempt <= maxRetriesPerPart; attempt++) {
-                try {
-                    etag = await uploadPartToS3(url, blob);
-                    break;
-                } catch (err) {
-                    if (attempt === maxRetriesPerPart) throw err;
-                }
-            }
+      // Defensive: enforce multipart rule (all parts except last must be >= 5MB)
+      if (!isLast && blob.size < MIN_S3_PART_BYTES) {
+        await sleep(200, signal);
+        continue;
+      }
 
-            parts.push({ PartNumber: partNumber, ETag: etag });
-            partNumber += 1;
+      throwIfAborted(signal);
 
-            uploadedBytes += blob.size;
-            if (onProgress) onProgress(uploadedBytes);
+      const { url } = await presignSessionAudioPart(
+        sessionId,
+        { uploadId, partNumber },
+        { signal }
+      );
 
-            if (isLast) break;
+      let etag = null;
+      for (let attempt = 1; attempt <= maxRetriesPerPart; attempt++) {
+        throwIfAborted(signal);
+
+        try {
+          etag = await uploadPartToS3(url, blob, { signal });
+          break;
+        } catch (err) {
+          // if cancelled, stop immediately
+          if (err?.name === "AbortError") throw err;
+          if (attempt === maxRetriesPerPart) throw err;
         }
+      }
 
-        return await completeSessionAudioMultipart(sessionId, {
-            uploadId,
-            parts,
-            originalFilename: filename,
-            languageCode,
-        });
-    } catch (err) {
-        try { await abortSessionAudioMultipart(sessionId); } catch (_) { }
-        throw err;
+      parts.push({ PartNumber: partNumber, ETag: etag });
+      partNumber += 1;
+
+      uploadedBytes += blob.size;
+      if (onProgress) onProgress(uploadedBytes);
+
+      if (isLast) break;
     }
+
+    throwIfAborted(signal);
+
+    return await completeSessionAudioMultipart(
+      sessionId,
+      {
+        uploadId,
+        parts,
+        originalFilename: filename,
+        languageCode,
+      },
+      { signal }
+    );
+  } catch (err) {
+    // Abort server-side multipart upload when cancelled or failed
+    try {
+      await abortSessionAudioMultipart(sessionId, { uploadId }, { signal });
+    } catch (_) {}
+
+    throw err;
+  }
 }
