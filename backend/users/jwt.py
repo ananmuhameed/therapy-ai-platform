@@ -1,4 +1,3 @@
-# users/jwt.py
 from django.conf import settings
 from django.contrib.auth import authenticate
 from .serializers import UserPublicSerializer
@@ -13,7 +12,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 
 REFRESH_COOKIE = "refresh_token"
 
-def set_refresh_cookie(response, refresh_token: str):
+def set_refresh_cookie(response, refresh_token: str, max_age: int):
     secure = not settings.DEBUG  # dev http => False, prod https => True
     response.set_cookie(
         key=REFRESH_COOKIE,
@@ -22,7 +21,7 @@ def set_refresh_cookie(response, refresh_token: str):
         secure=secure,
         samesite="Lax",
         path="/api/v1/auth/",
-        max_age=14 * 24 * 60 * 60,
+        max_age=max_age,
     )
 
 def clear_refresh_cookie(response):
@@ -38,6 +37,7 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
+        remember_me = request.data.get("remember_me", False)
 
         user = authenticate(request, username=email, password=password)
         if not user:
@@ -55,11 +55,16 @@ class LoginView(APIView):
         refresh = RefreshToken.for_user(user)
         access = str(refresh.access_token)
 
+        if remember_me:
+            max_age = 365 * 24 * 60 * 60   # 30 days
+        else:
+            max_age = 24 * 60 * 60        # 1 day
+
         resp = Response(
             {"access": access, "user": UserPublicSerializer(user).data},
             status=status.HTTP_200_OK,
         )
-        set_refresh_cookie(resp, str(refresh))
+        set_refresh_cookie(resp, str(refresh), max_age)
         return resp
 
 
