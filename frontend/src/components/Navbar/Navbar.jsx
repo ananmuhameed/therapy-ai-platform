@@ -6,6 +6,7 @@ import { ChevronDown, LogOut, User, Moon, Sun, Languages } from "lucide-react";
 import Swal from "sweetalert2";
 import { logout } from "../../auth/storage";
 
+
 const Navbar = () => {
   const navigate = useNavigate();
 
