@@ -71,7 +71,6 @@ export default function TherapistProfile() {
           country: data.country || "",
           yearsExperience: data.years_experience || "",
         };
-
         formik.setValues(nextValues);
         setSavedValues(nextValues);
 
@@ -115,7 +114,6 @@ export default function TherapistProfile() {
 
       if (apiError) return false;
 
-      // ✅ ADD THESE 2 LINES
       const { data: me } = await api.get("/auth/me/");
       setUser(me);
 

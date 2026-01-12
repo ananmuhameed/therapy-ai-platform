@@ -101,6 +101,8 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 
 }
+REMEMBER_ME_REFRESH_AGE = 365 * 24 * 60 * 60
+DEFAULT_REFRESH_AGE = 24 * 60 * 60
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -118,7 +120,7 @@ ROOT_URLCONF = "core.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"], 
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
