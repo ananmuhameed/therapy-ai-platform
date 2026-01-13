@@ -24,4 +24,4 @@ RUN chmod +x /app/entrypoint.sh
 EXPOSE 8000
 
 # Command to run the Django web server using Gunicorn
-CMD ["/bin/bash", "-c", "gunicorn --bind 0.0.0.0:8000 core.wsgi:application"]
+# CMD ["/bin/bash", "-c", "gunicorn --bind 0.0.0.0:8000 core.wsgi:application"]
