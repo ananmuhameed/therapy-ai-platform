@@ -29,4 +29,4 @@ celerybeat-schedule
 backend/celerybeat-schedule
 backend/media/recordings/
 backend/recordings/
-backend/therapy_sessions/migrations/
+# backend/therapy_sessions/migrations/

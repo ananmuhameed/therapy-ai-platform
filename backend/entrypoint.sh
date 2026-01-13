@@ -12,3 +12,4 @@ python manage.py migrate
 # Start the Django web server using Gunicorn
 echo "Starting the Django web server..."
 gunicorn --bind 0.0.0.0:8000 core.wsgi:application
+# exec python manage.py runserver 0.0.0.0:8000
