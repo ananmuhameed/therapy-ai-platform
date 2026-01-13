@@ -6,8 +6,10 @@ export default function ClickableRow({ canOpen, onOpen, children, title }) {
     <div
       onClick={() => canOpen && onOpen?.()}
       className={classNames(
-        "grid grid-cols-12 items-center px-4 sm:px-6 py-3 bg-white transition",
-        canOpen ? "hover:bg-gray-50 cursor-pointer" : "cursor-default"
+        "grid grid-cols-12 items-center px-4 sm:px-6 py-3 bg-[rgb(var(--card))] text-[rgb(var(--text))] transition-colors",
+        canOpen
+          ? "hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+          : "cursor-default"
       )}
       role={canOpen ? "button" : undefined}
       tabIndex={canOpen ? 0 : undefined}

@@ -16,12 +16,8 @@ export default function PatientsTable({
 }) {
   const formatLastSession = (value) => {
     if (!value) return "—";
-
-    // If it's already a nice label (not a date), keep it
-    // Otherwise format as a date.
     const dt = new Date(value);
     if (Number.isNaN(dt.getTime())) return String(value);
-
     return formatDate(dt, { year: "numeric", month: "short", day: "2-digit" });
   };
 
@@ -45,7 +41,7 @@ export default function PatientsTable({
         <div className="flex justify-center gap-2">
           <button
             onClick={onClearFilters}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--card))] px-4 py-2 text-sm font-medium text-[rgb(var(--text))] border border-[rgb(var(--border))] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
             type="button"
           >
             Clear filters
@@ -53,7 +49,7 @@ export default function PatientsTable({
 
           <button
             onClick={onAddPatient}
-            className="inline-flex items-center gap-2 rounded-full bg-[#3078E2] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer transition-colors"
             type="button"
           >
             Add Patient
@@ -65,7 +61,6 @@ export default function PatientsTable({
         const name = p.full_name || p.name || "—";
         const age = p.age ?? calculateAge(p.date_of_birth);
 
-        // ✅ support multiple possible backend keys
         const lastSessionRaw =
           p.last_session_date ??
           p.last_session ??
@@ -86,14 +81,12 @@ export default function PatientsTable({
             onOpen={() => onViewProfile?.(p)}
             title="Open patient profile"
           >
-            {/* # */}
-            <div className="col-span-2 text-sm text-gray-700 text-left font-mono">
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))] text-left font-mono">
               {index + 1}
             </div>
 
-            {/* Name */}
             <div className="col-span-3 min-w-0">
-              <div className="text-sm text-gray-900 font-medium truncate">
+              <div className="text-sm text-[rgb(var(--text))] font-medium truncate">
                 {name}
               </div>
             </div>
@@ -102,11 +95,11 @@ export default function PatientsTable({
               <GenderPill gender={p.gender} />
             </div>
 
-            <div className="col-span-2 text-sm text-gray-700 text-center">
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))] text-center">
               {age ?? "—"}
             </div>
 
-            <div className="col-span-2 text-sm text-gray-700 truncate text-center">
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))] truncate text-center">
               {lastSession}
             </div>
 
@@ -117,8 +110,8 @@ export default function PatientsTable({
                   onViewProfile?.(p);
                 }}
                 className={classNames(
-                  "inline-flex items-center justify-center rounded-full p-2",
-                  "text-[#3078E2] hover:bg-[#3078E2]/10 cursor-pointer"
+                  "inline-flex items-center justify-center rounded-full p-2 transition-colors",
+                  "text-[rgb(var(--primary))] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
                 )}
                 aria-label="View"
                 title="View"

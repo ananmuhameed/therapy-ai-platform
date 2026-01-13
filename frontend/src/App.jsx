@@ -28,43 +28,44 @@ function App() {
   useEffect(() => {
     setNavigate(navigate);
   }, [navigate]);
-
-  return (
-    <>
-      <Routes>
-        <Route element={<LandingLayout />}>
+return (
+  <div className="min-h-screen bg-[rgb(var(--bg))] text-[rgb(var(--text))] transition-colors duration-300">
+    <Routes>
+      <Route element={<LandingLayout />}>
         <Route path="/" element={<Navigate to="/home" />} />
         <Route path="/features" element={<FeaturesPage />} />
         <Route path="/plans" element={<Plans />} />
         <Route path="/home" element={<Home />} />
-        </Route>
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/verify-email" element={<VerifyEmail />} />
+      </Route>
 
-        <Route path="/patients/:patientId" element={<PatientProfile />} />
-        <Route path="/therapistprofile" element={<TherapistProfile />} />
-        <Route path="/sessions/:sessionId" element={<SessionDetailsPage />} />
-        <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/sessions/new" element={<Session />} />
-          <Route path="/patients" element={<PatientsListPage />} />
-          <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          
-        </Route>
-      </Routes>
-      <ToastContainer
-  position="top-right"
-  autoClose={3000}
-  hideProgressBar={false}
-  closeOnClick
-  pauseOnHover
-  draggable
-  style={{ zIndex: 999999 }}
-/>
-      </>
-  );
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+
+      <Route path="/patients/:patientId" element={<PatientProfile />} />
+      <Route path="/therapistprofile" element={<TherapistProfile />} />
+      <Route path="/sessions/:sessionId" element={<SessionDetailsPage />} />
+
+      <Route element={<MainLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/sessions/new" element={<Session />} />
+        <Route path="/patients" element={<PatientsListPage />} />
+        <Route path="/sessions" element={<SessionsPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+      </Route>
+    </Routes>
+
+    <ToastContainer
+      position="top-right"
+      autoClose={3000}
+      hideProgressBar={false}
+      closeOnClick
+      pauseOnHover
+      draggable
+      style={{ zIndex: 999999 }}
+    />
+  </div>
+);
 }
 
 export default App;

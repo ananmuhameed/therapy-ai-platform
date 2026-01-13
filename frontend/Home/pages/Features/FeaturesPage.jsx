@@ -51,11 +51,13 @@ const features = [
 
 export default function FeaturesPage() {
   return (
-     <div className="min-h-screen px-6 py-20 bg-gradient-to-b from-slate-50 to-white text-black relative overflow-hidden">
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-200/40 rounded-full blur-3xl" />
-      <div className="absolute top-1/3 -right-40 w-[400px] h-[400px] bg-blue-100/50 rounded-full blur-3xl" />
-    <div className="min-h-screen px-6 py-20 bg-gradient-to-b from-slate-50 to-white text-black">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen px-6 py-20 bg-[rgb(var(--bg))] text-[rgb(var(--text))] relative overflow-hidden transition-colors">
+
+      {/* Glow blobs */}
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-3xl" />
+      <div className="absolute top-1/3 -right-40 w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-3xl" />
+
+      <div className="max-w-6xl mx-auto relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -67,7 +69,7 @@ export default function FeaturesPage() {
           <h1 className="text-4xl md:text-5xl font-bold mb-6">
             Powerful Features, Built for Professionals
           </h1>
-          <p className="max-w-2xl mx-auto text-gray-600">
+          <p className="max-w-2xl mx-auto text-[rgb(var(--text-muted))]">
             Our platform helps therapists save time, reduce manual work, and focus
             on what matters most — patient care.
           </p>
@@ -85,31 +87,29 @@ export default function FeaturesPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 whileHover={{ scale: 1.03, y: -6 }}
-                className="group relative rounded-2xl p-8 backdrop-blur-xl border bg-blue-50/70 border-black/5 hover:border-black/10 transition-all duration-300 overflow-hidden"
+                className="group relative rounded-2xl p-8 backdrop-blur-xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] transition-all duration-300 overflow-hidden"
               >
-                {/* Default Gradient */}
-                <div className="absolute inset-0 bg-white opacity-100 transition-opacity duration-300" />
-
-                {/* Hover Gradient */}
-                <div className="absolute inset-0  group-hover:opacity-100 transition-opacity duration-300" />
-
                 <div className="relative z-10">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 rounded-xl bg-blue-600">
+                    <div className="p-3 rounded-xl bg-[rgb(var(--primary))]">
                       <Icon className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold">{feature.title}</h3>
+                    <h3 className="text-xl font-semibold">
+                      {feature.title}
+                    </h3>
                   </div>
 
-                  <p className="mb-4 text-gray-600">{feature.description}</p>
+                  <p className="mb-4 text-[rgb(var(--text-muted))]">
+                    {feature.description}
+                  </p>
 
                   <ul className="space-y-2">
                     {feature.points.map((point, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-2 text-gray-700"
+                        className="flex items-center gap-2 text-[rgb(var(--text))]"
                       >
-                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        <span className="w-2 h-2 bg-[rgb(var(--primary))] rounded-full"></span>
                         {point}
                       </li>
                     ))}
@@ -119,11 +119,7 @@ export default function FeaturesPage() {
             );
           })}
         </div>
-
-        
       </div>
     </div>
-    </div>
-    
   );
 }

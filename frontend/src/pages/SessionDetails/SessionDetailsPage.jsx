@@ -14,7 +14,6 @@ import {
   useReplaceAudio,
 } from "../../queries/sessions";
 
-// Components
 import TranscriptionBlock from "../../components/SessionDetails/TranscriptionBlock";
 import AudioPlayer from "../../components/SessionDetails/AudioPlayer";
 import ReportSummary from "../../components/Reports/ReportSummary";
@@ -50,7 +49,7 @@ export default function SessionDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center text-[rgb(var(--text))]">
         <Loader2 className="animate-spin mr-2" /> Loading...
       </div>
     );
@@ -58,13 +57,14 @@ export default function SessionDetailsPage() {
 
   if (isError || !session) {
     return (
-      <div className="text-center mt-10">
+      <div className="text-center mt-10 text-[rgb(var(--text))]">
         Session not found
         <div className="mt-3">
           <button
-            className="text-blue-600 underline"
+            className="text-[rgb(var(--primary))] underline"
             onClick={() => refetch()}
-            type="button">
+            type="button"
+          >
             Retry
           </button>
         </div>
@@ -73,35 +73,35 @@ export default function SessionDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-8 mt-6">
+    <div className="min-h-screen bg-[rgb(var(--bg))] p-8 mt-6 text-[rgb(var(--text))]">
       {/* HEADER */}
       <header className="flex justify-between items-start mb-8 max-w-6xl mx-auto">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition"
+            className="bg-[rgb(var(--primary))] hover:opacity-90 text-white p-2 rounded-full shadow-lg transition"
             type="button"
           >
             <ArrowLeft size={20} />
           </button>
 
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold">
               {session.patient_name || `Patient #${session.patient}`}
             </h1>
 
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500 uppercase font-medium bg-gray-100 px-2 py-0.5 rounded">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <span className="text-xs uppercase font-medium bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded text-[rgb(var(--text-muted))]">
                 Session #{session.id}
               </span>
-              <span className="text-xs text-gray-500 uppercase font-medium">
+              <span className="text-xs uppercase font-medium text-[rgb(var(--text-muted))]">
                 {formatDate(session.session_date || session.created_at)}
               </span>
               <span
                 className={`text-xs px-2 py-0.5 rounded uppercase font-bold ${
                   session.status === "completed"
-                    ? "text-green-600 bg-green-50"
-                    : "text-blue-600 bg-blue-50"
+                    ? "text-green-400 bg-green-500/10"
+                    : "text-blue-400 bg-blue-500/10"
                 }`}
               >
                 {session.status}
@@ -119,7 +119,7 @@ export default function SessionDetailsPage() {
                 "_blank"
               )
             }
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
+            className="flex items-center gap-2 bg-[rgb(var(--primary))] hover:opacity-90 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
             type="button"
           >
             <Download size={16} /> Download Report
@@ -128,7 +128,7 @@ export default function SessionDetailsPage() {
           <button
             onClick={handleGenerateReport}
             disabled={generatingReport || session.status === "analyzing"}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
+            className="flex items-center gap-2 bg-[rgb(var(--primary))] hover:opacity-90 disabled:opacity-60 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
             type="button"
           >
             {generatingReport ? (
@@ -144,19 +144,19 @@ export default function SessionDetailsPage() {
       <main className="flex flex-col items-center max-w-4xl mx-auto gap-8 pb-20">
         {/* AUDIO SECTION */}
         <div className="w-full">
-          <h2 className="text-gray-500 text-sm font-medium uppercase mb-3">
+          <h2 className="text-[rgb(var(--text-muted))] text-sm font-medium uppercase mb-3">
             Audio Recording
           </h2>
 
           {session.audio_url ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-[rgb(var(--card))] rounded-2xl shadow-sm border border-[rgb(var(--border))] p-6">
               <AudioPlayer audioUrl={session.audio_url} />
 
-              <div className="flex justify-end mt-4 pt-4 border-t border-gray-50">
+              <div className="flex justify-end mt-4 pt-4 border-t border-[rgb(var(--border))]">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingAudio}
-                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-600 transition disabled:opacity-60"
+                  className="flex items-center gap-2 text-xs text-[rgb(var(--text-muted))] hover:text-[rgb(var(--primary))] transition disabled:opacity-60"
                   type="button"
                 >
                   {uploadingAudio ? (
@@ -169,14 +169,14 @@ export default function SessionDetailsPage() {
               </div>
             </div>
           ) : (
-            <div className="p-10 border-2 border-dashed border-gray-200 rounded-2xl text-center bg-gray-50/50 hover:bg-gray-50 transition">
-              <p className="text-gray-500 mb-4 font-medium">
+            <div className="p-10 border-2 border-dashed border-[rgb(var(--border))] rounded-2xl text-center bg-black/5 dark:bg-white/5 transition">
+              <p className="text-[rgb(var(--text-muted))] mb-4 font-medium">
                 No audio recorded for this session yet.
               </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAudio}
-                className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm shadow-sm hover:bg-white hover:border-blue-400 hover:text-blue-500 transition disabled:opacity-60"
+                className="bg-[rgb(var(--card))] border border-[rgb(var(--border))] text-[rgb(var(--text))] px-4 py-2 rounded-lg text-sm shadow-sm hover:border-[rgb(var(--primary))] hover:text-[rgb(var(--primary))] transition disabled:opacity-60"
                 type="button"
               >
                 {uploadingAudio ? "Uploading..." : "Upload Audio Recording"}

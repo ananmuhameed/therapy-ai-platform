@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
-import { formatDate, classNames } from "../../utils/helpers";
+import { formatDate } from "../../utils/helpers";
 
-// Icons
 import { FiArrowLeft, FiEdit, FiTrash2, FiCheck, FiX } from "react-icons/fi";
 
-// Components
 import Skeleton from "../../components/ui/Skeleton";
 import PatientInfoCard from "./PatientInfoCard";
 import ContactCard from "./ContactCard";
@@ -20,7 +18,6 @@ export default function PatientProfile() {
   const navigate = useNavigate();
   const { patientId } = useParams();
 
-  // --- State ---
   const [isEditing, setIsEditing] = useState(false);
   const [patient, setPatient] = useState({
     full_name: "",
@@ -31,9 +28,7 @@ export default function PatientProfile() {
     notes: "",
   });
 
-  // Snapshot to detect unsaved changes + restore on Cancel
   const [savedPatient, setSavedPatient] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -41,13 +36,11 @@ export default function PatientProfile() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState("");
 
-  // --- Helpers ---
   const isDirty = useMemo(() => {
     if (!savedPatient) return false;
     return JSON.stringify(patient) !== JSON.stringify(savedPatient);
   }, [patient, savedPatient]);
 
-  // --- Effects ---
   useEffect(() => {
     const fetchPatientAndSessions = async () => {
       setLoading(true);
@@ -57,7 +50,7 @@ export default function PatientProfile() {
       try {
         const patientRes = await api.get(`/patients/${patientId}/`);
         setPatient(patientRes.data);
-        setSavedPatient(patientRes.data); // ✅ snapshot baseline
+        setSavedPatient(patientRes.data);
 
         setSessionsLoading(true);
         try {
@@ -67,7 +60,6 @@ export default function PatientProfile() {
             : sessionsRes.data?.results || [];
 
           const pid = Number(patientId);
-
           const filtered = allSessions
             .filter((s) => Number(s.patient) === pid)
             .sort((a, b) => {
@@ -78,14 +70,12 @@ export default function PatientProfile() {
 
           setSessions(filtered);
         } catch (err) {
-          console.error("Failed to load sessions list:", err);
           setSessionsError("Failed to load sessions for this patient.");
           setSessions([]);
         } finally {
           setSessionsLoading(false);
         }
       } catch (err) {
-        console.error(err);
         const status = err?.response?.status;
         let msg = "Failed to load patient profile.";
         if (status === 401) msg = "Unauthorized. Please login again.";
@@ -101,7 +91,6 @@ export default function PatientProfile() {
     if (patientId) fetchPatientAndSessions();
   }, [patientId]);
 
-  // --- Helpers ---
   const sessionsRows = useMemo(() => {
     return sessions.map((s, i) => ({
       id: s.id,
@@ -115,7 +104,6 @@ export default function PatientProfile() {
     }));
   }, [sessions]);
 
-  // --- Handlers ---
   const handleChange = (e) => {
     const { name, value } = e.target;
     setPatient((prev) => ({ ...prev, [name]: value }));
@@ -136,19 +124,17 @@ export default function PatientProfile() {
 
       const res = await api.patch(`/patients/${patientId}/`, payload);
       setPatient(res.data);
-      setSavedPatient(res.data); // ✅ update snapshot baseline
+      setSavedPatient(res.data);
       setIsEditing(false);
 
       toast.success("Patient profile saved successfully");
     } catch (err) {
-      console.error(err);
       setError("Failed to save changes.");
       toast.error("Failed to save changes");
     }
   };
 
   const handleCancel = async () => {
-    // If nothing changed, just exit edit mode
     if (!isDirty) {
       setIsEditing(false);
       return;
@@ -158,25 +144,14 @@ export default function PatientProfile() {
       title: "Discard changes?",
       text: "Your unsaved changes will be lost.",
       icon: "warning",
-      iconColor: "#2563eb",
-      width: "420px",
-      padding: "1.5rem",
-      showCancelButton: true,
-      confirmButtonColor: "#64748b",
-      cancelButtonColor: "#cbd5e1",
       confirmButtonText: "Discard",
       cancelButtonText: "Keep editing",
+      showCancelButton: true,
       reverseButtons: true,
-      customClass: {
-        popup: "rounded-2xl",
-        confirmButton: "rounded-xl",
-        cancelButton: "rounded-xl",
-      },
     });
 
     if (!res.isConfirmed) return;
 
-    // Restore saved snapshot
     if (savedPatient) setPatient(savedPatient);
     setIsEditing(false);
     toast.info("Changes discarded");
@@ -185,22 +160,12 @@ export default function PatientProfile() {
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: "Delete Patient?",
-      text: "This action is permanent and cannot be undone.",
+      text: "This action is permanent.",
       icon: "warning",
-      iconColor: "#2563eb",
-      width: "400px",
-      padding: "1.5rem",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#cbd5e1",
       confirmButtonText: "Yes, delete",
       cancelButtonText: "Cancel",
+      showCancelButton: true,
       reverseButtons: true,
-      customClass: {
-        popup: "rounded-2xl",
-        confirmButton: "rounded-xl",
-        cancelButton: "rounded-xl",
-      },
     });
 
     if (!result.isConfirmed) return;
@@ -210,16 +175,14 @@ export default function PatientProfile() {
       toast.success("Patient deleted successfully");
       navigate("/patients");
     } catch (err) {
-      console.error(err);
       setError("Failed to delete patient.");
       toast.error("Failed to delete patient");
     }
   };
 
-  // --- Render ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+      <div className="min-h-screen bg-[rgb(var(--bg))] p-8">
         <Skeleton className="h-10 w-10 rounded-full mb-6" />
         <Skeleton className="h-32 w-full rounded-2xl mb-6" />
         <Skeleton className="h-32 w-full rounded-2xl mb-6" />
@@ -229,16 +192,16 @@ export default function PatientProfile() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+      <div className="min-h-screen bg-[rgb(var(--bg))] p-8">
         <div className="mb-6">
           <button
             onClick={() => navigate("/patients")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--card))] shadow-sm ring-1 ring-[rgb(var(--border))] hover:opacity-80"
           >
-            <FiArrowLeft size={20} className="text-[#3078E2]" />
+            <FiArrowLeft size={20} className="text-[rgb(var(--primary))]" />
           </button>
         </div>
-        <div className="p-6 bg-white rounded-2xl border border-red-100 text-red-600">
+        <div className="p-6 bg-[rgb(var(--card))] rounded-2xl border border-red-500/30 text-red-400">
           {error}
         </div>
       </div>
@@ -246,16 +209,15 @@ export default function PatientProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="mx-auto max-w-full px-2 sm:px-3 md:px-4 py-8">
-        {/* Top Bar */}
+    <div className="min-h-screen bg-[rgb(var(--bg))]">
+      <div className="mx-auto max-w-full px-2 sm:px-3 md:px-4 py-8 text-[rgb(var(--text))]">
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => navigate("/patients")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
-            aria-label="Back to patients"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--card))] shadow-sm ring-1 ring-[rgb(var(--border))] hover:opacity-80"
+            aria-label="Back"
           >
-            <FiArrowLeft size={20} className="text-[#3078E2]" />
+            <FiArrowLeft size={20} className="text-[rgb(var(--primary))]" />
           </button>
 
           <div className="flex gap-2">
@@ -263,13 +225,13 @@ export default function PatientProfile() {
               <>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#3078E2] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95"
                 >
                   <FiEdit /> Edit
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#E23030] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95"
                 >
                   <FiTrash2 /> Delete
                 </button>
@@ -278,13 +240,13 @@ export default function PatientProfile() {
               <>
                 <button
                   onClick={handleSave}
-                  className="inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95"
                 >
                   <FiCheck /> Save
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="inline-flex items-center gap-2 rounded-full bg-gray-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-full bg-gray-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95"
                 >
                   <FiX /> Cancel
                 </button>
@@ -293,7 +255,6 @@ export default function PatientProfile() {
           </div>
         </div>
 
-        {/* 1. Header Card */}
         <PatientInfoCard
           patient={patient}
           patientId={patientId}
@@ -301,10 +262,8 @@ export default function PatientProfile() {
           onChange={handleChange}
         />
 
-        {/* 2. Contact Card */}
         <ContactCard patient={patient} isEditing={isEditing} onChange={handleChange} />
 
-        {/* 3. Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <SessionsCard
             sessions={sessionsRows}
@@ -316,9 +275,8 @@ export default function PatientProfile() {
           <NotesCard notes={patient.notes} isEditing={isEditing} onChange={handleChange} />
         </div>
 
-        {/* Bottom hint */}
         {isEditing && (
-          <div className="mt-6 text-xs text-gray-500">
+          <div className="mt-6 text-xs text-[rgb(var(--text-muted))]">
             Tip: Don’t forget to hit <span className="font-semibold">Save</span>.
           </div>
         )}
