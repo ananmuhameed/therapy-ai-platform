@@ -16,13 +16,14 @@ User = get_user_model()
 REFRESH_COOKIE = "refresh_token"
 
 def set_refresh_cookie(response, refresh_token: str, max_age: int):
-    secure = not settings.DEBUG  # dev http => False, prod https => True
+    refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+
     response.set_cookie(
         key=REFRESH_COOKIE,
         value=refresh_token,
         httponly=True,
-        secure=secure,
-        samesite="Lax",
+        secure=not settings.DEBUG,  # dev http => False, prod https => True
+        samesite="Lax",             # if frontend+backend on different domains, you may need "None" + Secure=True
         path="/api/v1/auth/",
         max_age=max_age,
     )
@@ -70,7 +71,8 @@ class LoginView(APIView):
             {"access": access, "user": UserPublicSerializer(user).data},
             status=status.HTTP_200_OK,
         )
-        set_refresh_cookie(resp, str(refresh), max_age=refresh_lifetime.total_seconds())
+        set_refresh_cookie(resp, str(refresh), max_age=int(refresh_lifetime.total_seconds()))
+        print("LOGIN VIEW HIT - SETTING COOKIE")
         return resp
 
 

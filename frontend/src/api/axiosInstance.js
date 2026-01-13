@@ -32,9 +32,18 @@ api.interceptors.response.use(
     const original = error.config;
 
     //  NEVER refresh on public endpoints
-    if (PUBLIC_ENDPOINTS.some(p => original.url.includes(p))) {
-  return Promise.reject(error);
-    }
+    const PUBLIC_ENDPOINTS = [
+      "/auth/login/",
+      "/auth/register/",
+      "/auth/google/login/",
+      "/verify-email/",
+      "/resend-verification/",
+      "/auth/token/refresh/", // optional guard
+      "/auth/logout/",        // optional guard
+    ];
+
+    const isPublic = PUBLIC_ENDPOINTS.some((p) => original.url?.startsWith(p));
+    if (isPublic) return Promise.reject(error);
 
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;

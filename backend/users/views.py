@@ -1,4 +1,5 @@
 import uuid
+from .jwt import set_refresh_cookie
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
