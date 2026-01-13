@@ -68,7 +68,6 @@ export default function TherapistProfile() {
           country: data.country || "",
           yearsExperience: data.years_experience || "",
         };
-
         formik.setValues(nextValues);
         setSavedValues(nextValues);
 

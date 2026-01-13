@@ -36,7 +36,7 @@ class WhisperTranscriptionService(BaseTranscriptionService):
         if not audio_path:
             raise ValueError("audio_path is required")
 
-        language = (language or "ar").strip() or "ar"
+        language = (language or "en").strip() or "en"
 
         client = self._get_client()
 

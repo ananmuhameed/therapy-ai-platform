@@ -5,10 +5,10 @@ export default function Footer() {
 
         {/* Brand */}
         <div>
-          <h2 className="text-2xl font-semibold">
+          <h2 className="text-2xl font-semibold  bg-clip-text text-white">
             TherapyAi
           </h2>
-          <p className="mt-4 text-sm text-white/80 leading-relaxed">
+          <p className="mt-4 text-sm text-blue-100 leading-relaxed">
             A secure, modern platform connecting patients with licensed therapists
             using cutting-edge technology.
           </p>
@@ -16,8 +16,8 @@ export default function Footer() {
 
         {/* Links */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Platform</h3>
-          <ul className="space-y-2 text-sm text-white/80">
+          <h3 className="text-lg font-semibold mb-4 text-white">Platform</h3>
+          <ul className="space-y-2 text-sm text-blue-100">
             <li className="hover:text-white cursor-pointer">Home</li>
             <li className="hover:text-white cursor-pointer">Plans</li>
             <li className="hover:text-white cursor-pointer">Security</li>
@@ -27,8 +27,8 @@ export default function Footer() {
 
         {/* Resources */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Resources</h3>
-          <ul className="space-y-2 text-sm text-white/80">
+          <h3 className="text-lg font-semibold mb-4 text-white">Resources</h3>
+          <ul className="space-y-2 text-sm text-blue-50">
             <li className="hover:text-white cursor-pointer">Help Center</li>
             <li className="hover:text-white cursor-pointer">Privacy Policy</li>
             <li className="hover:text-white cursor-pointer">Terms of Service</li>
@@ -38,8 +38,8 @@ export default function Footer() {
 
         {/* Suggestions / Complaints */}
         <div>
-          <h3 className="text-lg font-semibold mb-4">Your Feedback</h3>
-          <p className="text-sm text-white/80 mb-3">
+          <h3 className="text-lg font-semibold mb-4 text-white">Your Feedback</h3>
+          <p className="text-sm text-blue-50 mb-3">
             Have a suggestion or complaint? We’d love to hear from you.
           </p>
 
