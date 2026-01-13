@@ -17,7 +17,6 @@ export function useSession(sessionId, options = {}) {
     // important: don’t block refetching after navigation
     staleTime: 0,
 
-    // ✅ auto-poll while transcript/report not ready
     refetchInterval: (query) => {
       const s = query.state.data;
 

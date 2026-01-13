@@ -58,7 +58,6 @@ export default function SessionDetailsPage() {
 
   const showReportPending = reportPendingManual || reportPendingAuto;
 
-  // ✅ AUTO-START POLLING on mount/navigation:
   // When we arrive from "stop recording", transcript/report aren't ready yet.
   useEffect(() => {
     if (!session) return;
@@ -75,7 +74,7 @@ export default function SessionDetailsPage() {
     showReportPending,
   ]);
 
-  // ✅ Stop polling correctly
+  // Stop polling 
   useEffect(() => {
     if (!forcePoll || !session) return;
 
@@ -152,7 +151,7 @@ export default function SessionDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="h-screen flex items-center justify-center text-[rgb(var(--text))]">
         <Loader2 className="animate-spin mr-2" /> Loading...
       </div>
     );
@@ -160,11 +159,11 @@ export default function SessionDetailsPage() {
 
   if (isError || !session) {
     return (
-      <div className="text-center mt-10">
+      <div className="text-center mt-10 text-[rgb(var(--text))]">
         Session not found
         <div className="mt-3">
           <button
-            className="text-blue-600 underline"
+            className="text-[rgb(var(--primary))] underline"
             onClick={() => refetch()}
             type="button"
           >
@@ -178,7 +177,7 @@ export default function SessionDetailsPage() {
   const audioUrl = session.audio_url || session.audio?.audio_url || null;
 
   return (
-    <div className="min-h-screen bg-white p-8 mt-6">
+    <div className="min-h-screen bg-[rgb(var(--bg))] p-8 mt-6 text-[rgb(var(--text))]">
       <SessionDetailsHeader
         meta={{
           patientLabel: session.patient_name || `Patient #${session.patient}`,
@@ -196,19 +195,19 @@ export default function SessionDetailsPage() {
       <main className="flex flex-col items-center max-w-4xl mx-auto gap-8 pb-20">
         {/* AUDIO */}
         <div className="w-full">
-          <h2 className="text-gray-500 text-sm font-medium uppercase mb-3">
+          <h2 className="text-[rgb(var(--text-muted))] text-sm font-medium uppercase mb-3">
             Audio Recording
           </h2>
 
           {audioUrl ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-[rgb(var(--card))] rounded-2xl shadow-sm border border-[rgb(var(--border))] p-6">
               <AudioPlayer audioUrl={audioUrl} />
 
-              <div className="flex justify-end mt-4 pt-4 border-t border-gray-50">
+              <div className="flex justify-end mt-4 pt-4 border-t border-[rgb(var(--border))]">
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingAudio}
-                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-blue-600 transition disabled:opacity-60"
+                  className="flex items-center gap-2 text-xs text-[rgb(var(--text-muted))] hover:text-[rgb(var(--primary))] transition disabled:opacity-60"
                   type="button"
                 >
                   {uploadingAudio ? (
@@ -221,11 +220,14 @@ export default function SessionDetailsPage() {
               </div>
             </div>
           ) : (
-            <div className="p-10 border-2 border-dashed border-gray-200 rounded-2xl text-center bg-gray-50/50">
+            <div className="p-10 border-2 border-dashed border-[rgb(var(--border))] rounded-2xl text-center bg-black/5 dark:bg-white/5 transition">
+              <p className="text-[rgb(var(--text-muted))] mb-4 font-medium">
+                No audio recorded for this session yet.
+              </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAudio}
-                className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm"
+                className="bg-[rgb(var(--card))] border border-[rgb(var(--border))] text-[rgb(var(--text))] px-4 py-2 rounded-lg text-sm shadow-sm hover:border-[rgb(var(--primary))] hover:text-[rgb(var(--primary))] transition disabled:opacity-60"
                 type="button"
               >
                 Upload Audio Recording

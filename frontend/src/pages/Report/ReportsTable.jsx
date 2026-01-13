@@ -33,19 +33,19 @@ export default function ReportsTable({ loading, error, reports, onOpen }) {
             onOpen={() => onOpen(r.openPath)}
             title={canOpen ? "Open session" : "No session to open"}
           >
-            <div className="col-span-2 text-sm text-gray-700">{r.indexLabel}</div>
-
-            <div className="col-span-2 min-w-0">
-              <div className="text-sm text-gray-900 font-medium truncate">
-                {r.patientName}
-              </div>
-              {/* <div className="mt-0.5 text-xs text-gray-500 font-normal">
-                Session ID:{" "}
-                <span className="font-mono">{r.sessionId ?? "—"}</span>
-              </div> */}
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))]">
+              {r.indexLabel}
             </div>
 
-            <div className="col-span-3 text-sm text-gray-700 text-center">{r.date}</div>
+            <div className="col-span-2 min-w-0">
+              <div className="text-sm text-[rgb(var(--text))] font-medium truncate">
+                {r.patientName}
+              </div>
+            </div>
+
+            <div className="col-span-3 text-sm text-[rgb(var(--text-muted))] text-center">
+              {r.date}
+            </div>
 
             <div className="col-span-3 text-center">
               <StatusPill status={r.status} />
@@ -59,10 +59,10 @@ export default function ReportsTable({ loading, error, reports, onOpen }) {
                 }}
                 disabled={!canOpen}
                 className={classNames(
-                  "inline-flex items-center justify-center rounded-full p-2",
+                  "inline-flex items-center justify-center rounded-full p-2 transition-colors",
                   canOpen
-                    ? "text-[#3078E2] hover:bg-[#3078E2]/10 cursor-pointer"
-                    : "text-gray-300 cursor-not-allowed"
+                    ? "text-[rgb(var(--primary))] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+                    : "text-[rgb(var(--text-muted))] cursor-not-allowed opacity-50"
                 )}
                 aria-label="View"
                 title="View"

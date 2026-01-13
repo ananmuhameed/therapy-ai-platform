@@ -13,19 +13,17 @@ import {
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
-// Sub-components
 import ProfileHeader from "./ProfileHeader";
 import CredentialsCard from "./CredentialsCard";
 import ExperienceCard from "./ExperienceCard";
 import LocationCard from "./LocationCard";
+import ThemeWrapper from "../../components/ui/ThemeWraper";
 
 export default function TherapistProfile() {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Snapshot of last saved/loaded values for Cancel
   const [savedValues, setSavedValues] = useState(null);
 
   const user = getUser();
@@ -56,7 +54,6 @@ export default function TherapistProfile() {
 
   const isFormValid = formik.isValid;
 
-  // Load profile
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -74,22 +71,17 @@ export default function TherapistProfile() {
         formik.setValues(nextValues);
         setSavedValues(nextValues);
 
-       if (data.is_completed === true) {
-        setIsEditing(false);
-      } else {
+        if (data.is_completed === true) setIsEditing(false);
+        else setIsEditing(true);
+      } catch {
         setIsEditing(true);
+      } finally {
+        setIsLoading(false);
       }
-
-    } catch (error) {
-      console.error("Error loading profile:", error);
-      setIsEditing(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
     fetchProfileData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, []);
 
   const markAllTouched = () => {
@@ -126,7 +118,6 @@ export default function TherapistProfile() {
     }
   };
 
-
   const handleCancel = async () => {
     if (!formik.dirty) {
       setIsEditing(false);
@@ -137,7 +128,7 @@ export default function TherapistProfile() {
       title: "Discard changes?",
       text: "Your unsaved changes will be lost.",
       icon: "warning",
-      iconColor: "#2563eb",
+      iconColor: "rgb(var(--primary))",
       width: "420px",
       padding: "1.5rem",
       showCancelButton: true,
@@ -162,14 +153,8 @@ export default function TherapistProfile() {
     toast.info("Changes discarded");
   };
 
-  // Dashboard on left in header, but still autosave if dirty
   const handleGoToDashboard = async () => {
-    if (!isEditing) {
-      navigate("/dashboard");
-      return;
-    }
-
-    if (!formik.dirty) {
+    if (!isEditing || !formik.dirty) {
       navigate("/dashboard");
       return;
     }
@@ -178,7 +163,6 @@ export default function TherapistProfile() {
     if (ok) navigate("/dashboard");
   };
 
-  // Delete account now moved to bottom-left button (red background)
   const handleDelete = async () => {
     const result = await Swal.fire({
       title: "Delete Account?",
@@ -205,42 +189,45 @@ export default function TherapistProfile() {
         await api.delete("/therapist/profile/");
         toast.success("Account deleted successfully", { autoClose: 1500 });
 
-        // keep behavior: logout after delete
         setTimeout(async () => {
           await logout();
           navigate("/login");
         }, 1500);
-      } catch (error) {
-        console.error(error);
+      } catch {
         toast.error("Error deleting account");
       }
     }
   };
 
   const getInputClass = (isError) => {
-    const base = "w-full transition-all duration-200 rounded px-2 py-1 ";
+    const base =
+      "w-full transition-all duration-200 rounded px-2 py-1 bg-transparent text-[rgb(var(--text))] ";
     if (!isEditing)
-      return base + "bg-transparent border-transparent cursor-default pointer-events-none";
+      return (
+        base +
+        "border-transparent cursor-default pointer-events-none"
+      );
+
     return (
       base +
-      `bg-white border ${
+      `border ${
         isError
-          ? "border-red-400 bg-red-50"
-          : "border-gray-300 focus:border-blue-500 outline-none"
+          ? "border-red-500 bg-red-500/10"
+          : "border-[rgb(var(--border))] focus:border-[rgb(var(--primary))] outline-none"
       }`
     );
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading...
-      </div>
+      <ThemeWrapper className="min-h-screen flex items-center justify-center">
+        <span className="text-[rgb(var(--text-muted))]">Loading...</span>
+      </ThemeWrapper>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-sans text-slate-800 pb-32">
+    <ThemeWrapper className="min-h-screen p-8 pb-32">
       <ProfileHeader
         user={formik.values}
         isEditing={isEditing}
@@ -252,13 +239,13 @@ export default function TherapistProfile() {
       />
 
       {apiError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl">
           {apiError}
         </div>
       )}
 
       {isEditing && !isFormValid && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-2">
+        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-xl flex items-center gap-2">
           <ShieldCheck size={20} />
           <span>
             Please fill in <strong>all fields</strong> to continue.
@@ -293,20 +280,15 @@ export default function TherapistProfile() {
         </div>
       </div>
 
-      {/* Bottom-left Delete Account button (red background) */}
       <div className="mt-10 flex justify-start">
         <button
           type="button"
           onClick={handleDelete}
-          className="
-            inline-flex items-center gap-2 px-5 py-3 rounded-2xl
-            bg-red-600 text-white hover:bg-red-700 transition-all
-            shadow-md hover:shadow-lg
-          "
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all shadow-md hover:shadow-lg"
         >
           Delete Account
         </button>
       </div>
-    </div>
+    </ThemeWrapper>
   );
 }

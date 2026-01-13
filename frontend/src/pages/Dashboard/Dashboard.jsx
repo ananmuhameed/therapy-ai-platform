@@ -9,6 +9,7 @@ import StatBox from "./StatBox";
 import RecentSessionsTable from "./RecentSessionsTable";
 import GradientButton from "../../components/ui/GradientButton";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
+import ThemeWrapper from "../../components/ui/ThemeWraper";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -152,49 +153,52 @@ export default function Dashboard() {
   if (!userLoaded) return <div>Loading...</div>;
 
   return (
-    <div className="p-10 space-y-8 relative">
-      <h1 style={{ fontSize: 32, color: "#727473" }} className="font-semibold">
-        Welcome
-        {user?.first_name
-          ? `, ${user.first_name.charAt(0).toUpperCase()}${user.first_name.slice(1)}`
-          : ""}
-      </h1>
+  <ThemeWrapper className="p-10 space-y-8 relative min-h-screen">
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatBox icon={<FiUsers size={22} />} label="Patients" value={stats.patients_count} />
-        <StatBox icon={<FiMic size={22} />} label="Sessions this week" value={sessionsThisWeekClient} />
-        <StatBox
-          icon={<FiFileText size={22} />}
-          label="Reports Ready (this week)"
-          value={stats.reports_ready_this_week}
-        />
-      </div>
+    <h1 className="text-3xl font-semibold">
+      Welcome
+      {user?.first_name
+        ? `, ${user.first_name.charAt(0).toUpperCase()}${user.first_name.slice(1)}`
+        : ""}
+    </h1>
 
-      <div className="flex gap-4">
-        <GradientButton onClick={openAddPatient}>
-          <FiPlus /> Add Patient
-        </GradientButton>
-
-        <GradientButton onClick={startNewSession}>
-          <FiMic /> New Session
-        </GradientButton>
-      </div>
-
-      <RecentSessionsTable
-        sessions={recentSessionsFormatted}
-        onViewAll={() => navigate("/sessions")}
-        onRowClick={(id) => navigate(`/sessions/${id}`)}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <StatBox icon={<FiUsers size={22} />} label="Patients" value={stats.patients_count} />
+      <StatBox icon={<FiMic size={22} />} label="Sessions this week" value={sessionsThisWeekClient} />
+      <StatBox
+        icon={<FiFileText size={22} />}
+        label="Reports Ready (this week)"
+        value={stats.reports_ready_this_week}
       />
-
-      {showAddPatient && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAddPatient(false)} />
-          <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-            <AddPatientForm onClose={handlePatientAdded} />
-          </div>
-        </div>
-      )}
-
     </div>
-  );
+
+    <div className="flex gap-4">
+      <GradientButton onClick={openAddPatient}>
+        <FiPlus /> Add Patient
+      </GradientButton>
+
+      <GradientButton onClick={startNewSession}>
+        <FiMic /> New Session
+      </GradientButton>
+    </div>
+
+    <RecentSessionsTable
+      sessions={recentSessionsFormatted}
+      onViewAll={() => navigate("/sessions")}
+      onRowClick={(id) => navigate(`/sessions/${id}`)}
+    />
+
+    {showAddPatient && (
+      <div className="fixed inset-0 z-50">
+        <div
+          className="absolute inset-0 bg-black/40 dark:bg-black/70"
+          onClick={() => setShowAddPatient(false)}
+        />
+        <div className="relative z-10 flex min-h-full items-center justify-center p-4">
+          <AddPatientForm onClose={handlePatientAdded} />
+        </div>
+      </div>
+    )}
+  </ThemeWrapper>
+);
 }

@@ -7,7 +7,6 @@ import {
   mapPatientFieldErrors,
   toPatientCreatePayload,
 } from "../../Forms/schemas";
-// import { X } from "react-icons/x";
 
 export default function AddPatientForm({ onClose }) {
   const createPatient = useCreatePatient();
@@ -31,17 +30,17 @@ export default function AddPatientForm({ onClose }) {
   });
 
   const inputBase =
-    "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100";
+    "w-full rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-4 py-3 text-sm text-[rgb(var(--text))] placeholder:text-[rgb(var(--text-muted))] outline-none focus:border-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))]/20";
 
-  const labelBase = "text-sm font-semibold text-slate-700";
+  const labelBase = "text-sm font-semibold text-[rgb(var(--text))]";
 
   const fieldError = (name) =>
     formik.touched[name] && formik.errors[name] ? (
-      <p className="mt-1 text-xs text-red-600">{formik.errors[name]}</p>
+      <p className="mt-1 text-xs text-red-400">{formik.errors[name]}</p>
     ) : null;
 
   return (
-    <div className="w-full max-w-[520px] rounded-2xl bg-white shadow-xl px-4 sm:px-6 pt-6 sm:pt-8 pb-0">
+    <div className="w-full max-w-[520px] rounded-2xl bg-[rgb(var(--card))] border border-[rgb(var(--border))] shadow-xl px-4 sm:px-6 pt-6 sm:pt-8 pb-0 text-[rgb(var(--text))]">
       {/* Header */}
       <div className="relative flex items-center justify-center">
         <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] bg-clip-text text-transparent">
@@ -55,7 +54,7 @@ export default function AddPatientForm({ onClose }) {
             e.stopPropagation();
             onClose?.(false);
           }}
-          className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+          className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-[rgb(var(--text-muted))] hover:bg-white/5"
           aria-label="Close"
           title="Close"
         >
@@ -65,7 +64,7 @@ export default function AddPatientForm({ onClose }) {
 
       <div className="px-1 sm:px-5 pb-6">
         {apiError && (
-          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
             {apiError}
           </div>
         )}

@@ -12,21 +12,18 @@ import BackButton from "../../components/ui/BackButton";
 import PatientsControls from "./PatientsControls";
 import PatientsTable from "./PatientsTable";
 import AddPatientForm from "../../components/AddPatientForm/AddPatientForm";
+import ThemeWrapper from "../../components/ui/ThemeWraper";
 
 export default function PatientsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
 
-  // UI state
   const [search, setSearch] = useState("");
   const [filterGender, setFilterGender] = useState("all");
   const [profileBlocked, setProfileBlocked] = useState(false);
-
-  // sessions for "Last session" column
   const [sessions, setSessions] = useState([]);
 
-  // React Query data
   const {
     data: patients = [],
     isLoading,
@@ -34,23 +31,21 @@ export default function PatientsListPage() {
     error,
   } = usePatients();
 
-  // URL controls the modal
   const showAdd = useMemo(() => {
     const sp = new URLSearchParams(location.search);
     return sp.get("add") === "1";
   }, [location.search]);
 
-  // --- Alert ---
   const showProfileAlert = useCallback(() => {
     Swal.fire({
       icon: "warning",
-      iconColor: "#3078E2",
+      iconColor: "rgb(var(--primary))",
       title: "Profile incomplete",
       text: "Please complete your profile first.",
       showCancelButton: true,
       confirmButtonText: "Go to profile",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#3078E2",
+      confirmButtonColor: "rgb(var(--primary))",
       customClass: {
         popup: "rounded-2xl",
         confirmButton: "rounded-2xl",
@@ -60,11 +55,6 @@ export default function PatientsListPage() {
       if (res.isConfirmed) navigate("/therapistprofile");
     });
   }, [navigate]);
-
-  // ⚠️ IMPORTANT:
-  // This "permission check" is risky if POST /patients/ creates a row.
-  // If you *must* check, use a safe endpoint like /therapist/profile/ or a dedicated /permissions/ endpoint.
-  // For now, we'll only block if we already detected 403 earlier (e.g., from form submit), not by creating data.
 
   const openAddModal = useCallback(() => {
     if (profileBlocked) {
@@ -78,7 +68,6 @@ export default function PatientsListPage() {
     navigate("/patients", { replace: true });
     queryClient.invalidateQueries({ queryKey: qk.patients });
 
-    // refresh sessions too (optional)
     api
       .get("/sessions/")
       .then(({ data }) => {
@@ -88,7 +77,6 @@ export default function PatientsListPage() {
       .catch(() => {});
   }, [navigate, queryClient]);
 
-  // Fetch sessions once (needed for last session date per patient)
   useEffect(() => {
     api
       .get("/sessions/")
@@ -99,7 +87,6 @@ export default function PatientsListPage() {
       .catch(() => setSessions([]));
   }, []);
 
-  // Derived: filter patients by search + gender
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
     const g = String(filterGender).toLowerCase();
@@ -111,7 +98,6 @@ export default function PatientsListPage() {
     });
   }, [patients, search, filterGender]);
 
-  // Build map: patientId -> latest session datetime
   const lastSessionByPatientId = useMemo(() => {
     const map = new Map();
     for (const s of sessions) {
@@ -125,7 +111,6 @@ export default function PatientsListPage() {
     return map;
   }, [sessions]);
 
-  // Enrich patients
   const filteredPatientsEnriched = useMemo(() => {
     return filteredPatients.map((p) => ({
       ...p,
@@ -142,27 +127,29 @@ export default function PatientsListPage() {
   const handleViewProfile = (p) => navigate(`/patients/${p.id}`);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <ThemeWrapper className="min-h-screen">
       <div className="mx-auto max-w-screen-2xl px-2 py-6">
-        {/* Top Bar */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BackButton onClick={() => navigate("/dashboard")} />
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3078E2]/10">
-                <FiUsers className="text-[#3078E2]" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgb(var(--bg-secondary))]">
+                <FiUsers className="text-[rgb(var(--primary))]" />
               </div>
 
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Patients</h1>
-                <p className="text-sm text-gray-600">Manage your patients list.</p>
+                <h1 className="text-2xl font-semibold text-[rgb(var(--text))]">
+                  Patients
+                </h1>
+                <p className="text-sm text-[rgb(var(--text-muted))]">
+                  Manage your patients list.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Controls */}
         <PatientsControls
           totalLabel={totalLabel}
           search={search}
@@ -171,10 +158,11 @@ export default function PatientsListPage() {
           onFilterGenderChange={setFilterGender}
           onAddPatient={openAddModal}
           addDisabled={profileBlocked}
-          onRefresh={() => queryClient.invalidateQueries({ queryKey: qk.patients })}
+          onRefresh={() =>
+            queryClient.invalidateQueries({ queryKey: qk.patients })
+          }
         />
 
-        {/* Table */}
         <PatientsTable
           loading={isLoading || isFetching}
           error={error ? "Failed to load patients." : ""}
@@ -188,23 +176,18 @@ export default function PatientsListPage() {
           addDisabled={profileBlocked}
         />
 
-        {/* Add Patient Modal */}
         {showAdd && (
           <div className="fixed inset-0 z-50">
             <div
-              className="absolute inset-0 bg-black/40"
+              className="absolute inset-0 bg-black/40 dark:bg-black/70"
               onClick={closeAddModal}
             />
             <div className="relative z-10 flex min-h-full items-center justify-center p-4">
-              <AddPatientForm
-                onClose={closeAddModal}
-                // If your AddPatientForm detects 403, setProfileBlocked(true) there and call showProfileAlert()
-                // e.g., onPermissionDenied={() => { setProfileBlocked(true); showProfileAlert(); closeAddModal(); }}
-              />
+              <AddPatientForm onClose={closeAddModal} />
             </div>
           </div>
         )}
       </div>
-    </div>
+    </ThemeWrapper>
   );
 }

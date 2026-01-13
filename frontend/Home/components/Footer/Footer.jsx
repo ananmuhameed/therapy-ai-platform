@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className=" bg-gradient-to-r from-[#3078E2] via-[#5D93E1] to-[#8AAEE0]  text-transparent pt-16 pb-8 px-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 ">
+    <footer className="bg-gradient-to-r from-[rgb(var(--primary))] via-blue-400 to-blue-300 text-white pt-16 pb-8 px-6 transition-colors">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
 
         {/* Brand */}
         <div>
@@ -42,12 +42,14 @@ export default function Footer() {
           <p className="text-sm text-blue-50 mb-3">
             Have a suggestion or complaint? We’d love to hear from you.
           </p>
+
           <textarea
             rows="3"
             placeholder="Write your message..."
-            className="w-full px-4 py-2 rounded-lg text-gray-800 outline-none resize-none mb-3"
+            className="w-full px-4 py-2 rounded-lg bg-white text-slate-900 outline-none resize-none mb-3"
           />
-          <button className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded-2xl text-white transition">
+
+          <button className="w-full bg-black/20 hover:bg-black/30 py-2 rounded-2xl text-white transition">
             Send
           </button>
         </div>
@@ -55,7 +57,7 @@ export default function Footer() {
       </div>
 
       {/* Divider */}
-      <div className="border-t border-blue-300/20 mt-12 pt-6 text-center text-sm text-blue-200">
+      <div className="border-t border-white/20 mt-12 pt-6 text-center text-sm text-white/70">
         © {new Date().getFullYear()} TherapyAi. All rights reserved.
       </div>
     </footer>

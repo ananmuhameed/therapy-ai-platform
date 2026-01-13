@@ -99,7 +99,7 @@ export default function SessionsPage() {
   }, [loading, error, filtered.length]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-[rgb(var(--bg))] text-[rgb(var(--text))]">
       <div className="mx-auto max-w-screen-2xl px-2 py-6">
         {/* Top Bar */}
         <div className="mb-6 flex items-center justify-between">
@@ -107,13 +107,13 @@ export default function SessionsPage() {
             <BackButton onClick={() => navigate("/dashboard")} />
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3078E2]/10">
-                <Mic className="text-[#3078E2]" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgb(var(--primary))]/10">
+                <Mic className="text-[rgb(var(--primary))]" />
               </div>
 
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Sessions</h1>
-                <p className="text-sm text-gray-600">
+                <h1 className="text-2xl font-semibold text-[rgb(var(--text))]">Sessions</h1>
+                <p className="text-sm text-[rgb(var(--text-muted))]">
                   View and manage therapy sessions.
                 </p>
               </div>
@@ -123,7 +123,7 @@ export default function SessionsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={loadAll}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--card))] px-3 py-2 text-sm font-medium text-[rgb(var(--text))] border border-[rgb(var(--border))] hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
               type="button"
               title="Refresh"
             >
@@ -133,7 +133,7 @@ export default function SessionsPage() {
 
             <Link
               to="/sessions/new"
-              className="inline-flex items-center gap-2 rounded-full bg-[#3078E2] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90"
+              className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90"
               title="New Session"
             >
               <Mic className="h-4 w-4" />

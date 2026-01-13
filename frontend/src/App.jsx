@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import React from "react";
 import { setNavigate } from "./auth/navigation";
 import "./index.css";
 import MainLayout from "./layouts/MainLayout";
@@ -34,16 +33,21 @@ function App() {
   return (
     <>
       <Routes>
+
+        {/* Landing Layout */}
         <Route element={<LandingLayout />}>
-        <Route path="/" element={<Navigate to="/home" />} />
-        <Route path="/features" element={<FeaturesPage />} />
-        <Route path="/plans" element={<Plans />} />
-        <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Navigate to="/home" />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/home" element={<Home />} />
         </Route>
+
+        {/* Auth */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
+        {/* Protected Standalone Pages */}
         <Route
           path="/patients/:patientId"
           element={
@@ -70,6 +74,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Main App Layout */}
         <Route element={<MainLayout />}>
           <Route
             path="/dashboard"
@@ -79,6 +85,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/sessions/new"
             element={
@@ -87,6 +94,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/patients"
             element={
@@ -95,6 +103,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/sessions"
             element={
@@ -103,6 +112,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/reports"
             element={
@@ -112,7 +122,9 @@ function App() {
             }
           />
         </Route>
+
       </Routes>
+
       <ToastContainer
         position="top-right"
         autoClose={3000}

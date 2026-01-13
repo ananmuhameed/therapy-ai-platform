@@ -63,7 +63,7 @@ export default function SessionsListPage() {
   }, [error, sessionsError, patientsError]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
+    <div className="min-h-screen bg-[rgb(var(--bg))] p-6 text-[rgb(var(--text))]">
       <div className="mb-6 flex justify-between">
         <div className="flex gap-3 items-center">
           <BackButton onClick={() => navigate("/dashboard")} />
@@ -72,13 +72,13 @@ export default function SessionsListPage() {
 
         <Link
           to="/sessions/new"
-          className="bg-[#3078E2] text-white px-4 py-2 rounded-full flex items-center gap-2"
+          className="bg-[rgb(var(--primary))] text-white px-4 py-2 rounded-full flex items-center gap-2"
         >
           <FiMic /> New
         </Link>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mb-4 flex justify-between items-center">
+      <div className="bg-[rgb(var(--card))] rounded-2xl shadow-sm ring-1 ring-[rgb(var(--border))] p-4 mb-4 flex justify-between items-center">
         <SearchInput
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -87,7 +87,7 @@ export default function SessionsListPage() {
 
         <button
           onClick={handleRefresh}
-          className="flex items-center gap-2 text-sm text-gray-700"
+          className="flex items-center gap-2 text-sm text-[rgb(var(--text-muted))]"
           type="button"
           disabled={fetching}
           title="Refresh"
@@ -98,41 +98,43 @@ export default function SessionsListPage() {
       </div>
 
       {errorMsg && (
-        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
           {errorMsg}
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+      <div className="bg-[rgb(var(--card))] rounded-2xl shadow-sm ring-1 ring-[rgb(var(--border))] overflow-hidden">
         {loading ? (
           <div className="p-4 space-y-2">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-12 w-full rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-[rgb(var(--border))]">
             {filtered.map((s) => (
               <div
                 key={s.id}
                 onClick={() => navigate(`/sessions/${s.id}`)}
-                className="grid grid-cols-12 p-4 hover:bg-gray-50 cursor-pointer items-center"
+                className="grid grid-cols-12 p-4 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer items-center transition"
               >
-                <div className="col-span-5 font-medium">{s.patientName}</div>
-                <div className="col-span-3 text-sm text-gray-600">
+                <div className="col-span-5 font-medium truncate">
+                  {s.patientName}
+                </div>
+                <div className="col-span-3 text-sm text-[rgb(var(--text-muted))]">
                   {formatDate(s.session_date || s.created_at)}
                 </div>
                 <div className="col-span-3">
                   <StatusPill status={s.status} />
                 </div>
-                <div className="col-span-1 text-right text-[#3078E2]">
+                <div className="col-span-1 text-right text-[rgb(var(--primary))]">
                   <FiEye />
                 </div>
               </div>
             ))}
 
             {!filtered.length && (
-              <div className="p-6 text-sm text-gray-500">
+              <div className="p-6 text-sm text-[rgb(var(--text-muted))]">
                 No sessions found.
               </div>
             )}

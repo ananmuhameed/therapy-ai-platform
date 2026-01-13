@@ -3,25 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { FiRefreshCw, FiFileText } from "react-icons/fi";
 import { formatDate } from "../../utils/helpers";
 
-// Shared Components
 import BackButton from "../../components/ui/BackButton";
-
-// Page Components
 import ReportsControls from "./ReportsControls";
 import ReportsTable from "./ReportsTable";
+import ThemeWrapper from "../../components/ui/ThemeWraper";
 
-// React query hooks
 import { usePatients } from "../../queries/patients";
 import { useReportsPrefer } from "../../queries/reports";
 
 export default function ReportsPage() {
   const navigate = useNavigate();
 
-  // State
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  //queries ---
   const {
     data: patients = [],
     isLoading: patientsLoading,
@@ -71,7 +66,6 @@ export default function ReportsPage() {
       }));
     }
 
-    // fallback from sessions: treat completed sessions as report-ready
     const completed = reportsResult.list
       .filter((s) => String(s.status || "").toLowerCase() === "completed")
       .sort((a, b) => {
@@ -133,48 +127,34 @@ export default function ReportsPage() {
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <ThemeWrapper className="min-h-screen">
       <div className="mx-auto max-w-screen-2xl px-2 py-6">
-        {/* Top Bar */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <BackButton onClick={() => navigate("/dashboard")} />
 
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3078E2]/10">
-                <FiFileText className="text-[#3078E2]" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgb(var(--bg-secondary))]">
+                <FiFileText className="text-[rgb(var(--primary))]" />
               </div>
               <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
+                <h1 className="text-2xl font-semibold text-[rgb(var(--text))]">
                   Reports
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-[rgb(var(--text-muted))]">
                   View completed session reports.
                 </p>
               </div>
             </div>
           </div>
-
-          {/* <button
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer disabled:opacity-60"
-            type="button"
-            title="Refresh"
-            disabled={fetching}
-          >
-            <FiRefreshCw />
-            {fetching ? "Refreshing..." : "Refresh"}
-          </button> */}
         </div>
 
-        {/* Error */}
         {errorMsg && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-400">
             {errorMsg}
           </div>
         )}
 
-        {/* Controls */}
         <ReportsControls
           totalLabel={totalLabel}
           filterStatus={filterStatus}
@@ -183,7 +163,6 @@ export default function ReportsPage() {
           onSearchChange={setSearch}
         />
 
-        {/* Table */}
         <ReportsTable
           loading={loading}
           error={errorMsg}
@@ -191,6 +170,6 @@ export default function ReportsPage() {
           onOpen={navigate}
         />
       </div>
-    </div>
+    </ThemeWrapper>
   );
 }
