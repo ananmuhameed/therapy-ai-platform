@@ -1,24 +1,15 @@
-import uuid
-from .jwt import set_refresh_cookie
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import TherapistProfile
-from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import TherapistProfile, EmailVerification
 from .serializers import RegisterSerializer, TherapistProfileUpdateSerializer, UserPublicSerializer, TherapistProfileSerializer
 from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import RefreshToken
-<<<<<<< HEAD
-=======
-from .utils.google import verify_google_access_token
-from .serializers import GoogleLoginSerializer
->>>>>>> Last-Updates
 from django.utils import timezone
 from datetime import timedelta
-from .models import EmailVerification
 from .tasks import send_verification_email
-from django.shortcuts import get_object_or_404
+
 
 User = get_user_model()
 
