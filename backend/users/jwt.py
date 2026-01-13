@@ -98,7 +98,7 @@ class CookieTokenRefreshView(TokenRefreshView):
             set_refresh_cookie(
                 response,
                 new_refresh,
-                max_age=refresh_lifetime.total_seconds(),
+                max_age=int(refresh_lifetime.total_seconds()),
             )
             del response.data["refresh"]
 
@@ -170,7 +170,7 @@ class GoogleLoginView(APIView):
             status=status.HTTP_200_OK,
         )
 
-        set_refresh_cookie(resp, str(refresh), max_age=refresh_lifetime.total_seconds())
+        set_refresh_cookie(resp, str(refresh), max_age=int(refresh_lifetime.total_seconds()))
         print("LOGIN VIEW HIT - SETTING COOKIE")
         resp["x-AUTH-VIEW"] = "cookie-login"
         return resp
