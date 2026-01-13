@@ -1,6 +1,6 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Download, Sparkles, UploadCloud } from "lucide-react";
+import { Loader2, UploadCloud } from "lucide-react";
 import { formatDate } from "../../utils/helpers";
 import {
   useSession,
@@ -9,25 +9,107 @@ import {
 } from "../../queries/sessions";
 import api from "../../api/axiosInstance";
 
-// Components
 import TranscriptionBlock from "../../components/SessionDetails/TranscriptionBlock";
 import AudioPlayer from "../../components/SessionDetails/AudioPlayer";
 import ReportSummary from "../../components/Reports/ReportSummary";
 import SessionDetailsHeader from "./SessionDetailsHeader";
+
+const DONE = ["completed", "failed"];
 
 export default function SessionDetailsPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  const { data: session, isLoading, isError, refetch } = useSession(sessionId);
+  // polling control
+  const [forcePoll, setForcePoll] = useState(false);
+  const [waitingForReport, setWaitingForReport] = useState(false);
+
+  const {
+    data: session,
+    isLoading,
+    isError,
+    refetch,
+  } = useSession(sessionId, {
+    refetchInterval: forcePoll ? 1500 : false, // faster UX
+    refetchIntervalInBackground: true,
+  });
+
   const generateReport = useGenerateReport(sessionId);
   const replaceAudio = useReplaceAudio(sessionId);
 
   const generatingReport = generateReport.isPending;
   const uploadingAudio = replaceAudio.isPending;
 
-  const handleGenerateReport = () => generateReport.mutate();
+  const transcriptStatus = session?.transcript?.status;
+  const reportStatus = session?.report?.status;
+
+  const transcriptDone = DONE.includes(transcriptStatus);
+  const reportDone = DONE.includes(reportStatus);
+
+  const transcriptPending = !!session && (!session.transcript || !transcriptDone);
+
+  // If your backend always auto-generates report after transcription, treat missing report as pending
+  const reportPendingAuto = !!session && (!session.report || !reportDone);
+
+  // If user clicked Generate report manually
+  const reportPendingManual =
+    !!session && waitingForReport && (!session.report || !reportDone);
+
+  const showReportPending = reportPendingManual || reportPendingAuto;
+
+  // ✅ AUTO-START POLLING on mount/navigation:
+  // When we arrive from "stop recording", transcript/report aren't ready yet.
+  useEffect(() => {
+    if (!session) return;
+
+    const needsPolling = transcriptPending || showReportPending;
+
+    if (needsPolling) setForcePoll(true);
+    else setForcePoll(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    session?.id,
+    session?.updated_at,
+    transcriptPending,
+    showReportPending,
+  ]);
+
+  // ✅ Stop polling correctly
+  useEffect(() => {
+    if (!forcePoll || !session) return;
+
+    // If waitingForReport, stop only when report exists and done/failed
+    if (waitingForReport) {
+      if (session.report && reportDone) {
+        setForcePoll(false);
+        setWaitingForReport(false);
+      }
+      return;
+    }
+
+    // Auto flow: stop when both are done (or exist+done)
+    if (transcriptDone && session.report && reportDone) {
+      setForcePoll(false);
+    }
+
+    // If transcript is done but report isn't created yet, keep polling (important)
+  }, [
+    forcePoll,
+    waitingForReport,
+    session,
+    transcriptDone,
+    reportDone,
+  ]);
+
+  const handleGenerateReport = () => {
+    setWaitingForReport(true);
+    setForcePoll(true);
+
+    generateReport.mutate(undefined, {
+      onSettled: () => refetch(),
+    });
+  };
 
   const handleReplaceAudio = (event) => {
     const file = event.target.files?.[0];
@@ -41,15 +123,21 @@ export default function SessionDetailsPage() {
       return;
     }
 
-    replaceAudio.mutate(file);
+    // after replacing audio, transcription + report will be regenerated
+    setWaitingForReport(false);
+    setForcePoll(true);
+
+    replaceAudio.mutate(file, {
+      onSettled: () => refetch(),
+    });
+
     event.target.value = "";
   };
 
   const handleDownloadPdf = async () => {
-    const res = await api.get(
-      `/sessions/${sessionId}/report/pdf/`,
-      { responseType: "blob" }
-    );
+    const res = await api.get(`/sessions/${sessionId}/report/pdf/`, {
+      responseType: "blob",
+    });
 
     const blob = new Blob([res.data], { type: "application/pdf" });
     const url = window.URL.createObjectURL(blob);
@@ -87,6 +175,8 @@ export default function SessionDetailsPage() {
     );
   }
 
+  const audioUrl = session.audio_url || session.audio?.audio_url || null;
+
   return (
     <div className="min-h-screen bg-white p-8 mt-6">
       <SessionDetailsHeader
@@ -110,9 +200,10 @@ export default function SessionDetailsPage() {
             Audio Recording
           </h2>
 
-          {session.audio_url ? (
+          {audioUrl ? (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <AudioPlayer audioUrl={session.audio_url} />
+              <AudioPlayer audioUrl={audioUrl} />
+
               <div className="flex justify-end mt-4 pt-4 border-t border-gray-50">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -153,21 +244,33 @@ export default function SessionDetailsPage() {
 
         {/* TRANSCRIPT */}
         <div className="w-full">
-          <TranscriptionBlock
-            transcript={
-              session.transcript?.cleaned_transcript
-                ? [{ text: session.transcript.cleaned_transcript }]
-                : []
-            }
-          />
+          {transcriptPending ? (
+            <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-6 text-sm text-gray-600 flex items-center gap-2">
+              <Loader2 className="animate-spin" size={16} />
+              Transcribing...
+            </div>
+          ) : (
+            <TranscriptionBlock
+              transcript={
+                session.transcript?.cleaned_transcript
+                  ? [{ text: session.transcript.cleaned_transcript }]
+                  : []
+              }
+            />
+          )}
         </div>
 
         {/* REPORT */}
-        {session.report && (
-          <div className="w-full">
-            <ReportSummary report={session.report} />
-          </div>
-        )}
+        <div className="w-full">
+          {showReportPending ? (
+            <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-6 text-sm text-gray-600 flex items-center gap-2">
+              <Loader2 className="animate-spin" size={16} />
+              Generating report...
+            </div>
+          ) : session.report ? (
+            <ReportSummary report={session.report} onEdit={() => setEditOpen(true)} />
+          ) : null}
+        </div>
       </main>
     </div>
   );
