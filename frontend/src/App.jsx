@@ -18,9 +18,11 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import VerifyEmail from "./pages/VerifyEmai/VerifyEmail";
 import Home from "../Home/pages/Home/Home";
- import LandingLayout from "../Home/Layout/Landinglayout";
- import FeaturesPage from "../Home/pages/Features/FeaturesPage";
+import LandingLayout from "../Home/Layout/Landinglayout"; 
+import FeaturesPage from "../Home/pages/Features/FeaturesPage";
 import Plans from "../Home/pages/Plans/Plans";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 
 function App() {
   const navigate = useNavigate();
@@ -42,28 +44,85 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
-        <Route path="/patients/:patientId" element={<PatientProfile />} />
-        <Route path="/therapistprofile" element={<TherapistProfile />} />
-        <Route path="/sessions/:sessionId" element={<SessionDetailsPage />} />
+        <Route
+          path="/patients/:patientId"
+          element={
+            <ProtectedRoute>
+              <PatientProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/therapistprofile"
+          element={
+            <ProtectedRoute>
+              <TherapistProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sessions/:sessionId"
+          element={
+            <ProtectedRoute>
+              <SessionDetailsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/sessions/new" element={<Session />} />
-          <Route path="/patients" element={<PatientsListPage />} />
-          <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sessions/new"
+            element={
+              <ProtectedRoute>
+                <Session />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patients"
+            element={
+              <ProtectedRoute>
+                <PatientsListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sessions"
+            element={
+              <ProtectedRoute>
+                <SessionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <ReportsPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
       <ToastContainer
-  position="top-right"
-  autoClose={3000}
-  hideProgressBar={false}
-  closeOnClick
-  pauseOnHover
-  draggable
-  style={{ zIndex: 999999 }}
-/>
-      </>
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        style={{ zIndex: 999999 }}
+      />
+    </>
   );
 }
 

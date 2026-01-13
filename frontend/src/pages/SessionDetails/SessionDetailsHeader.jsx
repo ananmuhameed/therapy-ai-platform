@@ -2,11 +2,11 @@ import React from "react";
 import { ArrowLeft, Download, Loader2, Sparkles } from "lucide-react";
 
 export default function SessionDetailsHeader({
-  sessionId,
   meta,
   generatingReport,
   onBack,
   onGenerateReport,
+  onDownloadPdf,
 }) {
   const {
     patientLabel,
@@ -58,12 +58,7 @@ export default function SessionDetailsHeader({
       {isCompleted ? (
         <button
           type="button"
-          onClick={() =>
-            window.open(
-              `http://localhost:8000/api/sessions/${sessionId}/download_pdf/`,
-              "_blank"
-            )
-          }
+          onClick={onDownloadPdf}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
         >
           <Download size={16} /> Download Report

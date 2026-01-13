@@ -88,10 +88,6 @@ export default function Dashboard() {
 
   // ---- Load dashboard ----
   useEffect(() => {
-    if (!getAccessToken()) {
-      navigate("/login", { replace: true });
-      return;
-    }
 
     (async () => {
       try {
@@ -152,7 +148,7 @@ export default function Dashboard() {
         status: s.status,
       }));
   }, [sessions, patients]);
-
+  
   if (!userLoaded) return <div>Loading...</div>;
 
   return (
@@ -198,6 +194,7 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

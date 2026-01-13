@@ -1,4 +1,5 @@
 import uuid
+from .jwt import set_refresh_cookie
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -150,23 +151,13 @@ class GoogleLoginView(APIView):
         serializer = GoogleLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        google_user = verify_google_access_token(
-            serializer.validated_data["access_token"]
-        )
-
+        google_user = verify_google_access_token(serializer.validated_data["access_token"])
         if not google_user:
-            return Response(
-                {"detail": "Invalid Google token"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            return Response({"detail": "Invalid Google token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         email = google_user.get("email")
-
         if not email:
-            return Response(
-                {"detail": "Google account has no email"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "Google account has no email"}, status=status.HTTP_400_BAD_REQUEST)
 
         user, created = User.objects.get_or_create(
             email=email,
@@ -177,14 +168,14 @@ class GoogleLoginView(APIView):
             },
         )
 
-        # Ensure therapist profile exists
         TherapistProfile.objects.get_or_create(user=user)
 
         refresh = RefreshToken.for_user(user)
+        access = str(refresh.access_token)
 
-        return Response(
+        resp = Response(
             {
-                "access": str(refresh.access_token),
+                "access": access,
                 "user": {
                     "id": user.id,
                     "email": user.email,
@@ -196,7 +187,12 @@ class GoogleLoginView(APIView):
             },
             status=status.HTTP_200_OK,
         )
- # =========================
+
+        set_refresh_cookie(resp, str(refresh))
+        print("LOGIN VIEW HIT - SETTING COOKIE")
+        resp["x-AUTH-VIEW"] = "cookie-login"
+        return resp
+# =========================
 # VERIFY EMAIL
 # =========================
 class VerifyEmailView(APIView):

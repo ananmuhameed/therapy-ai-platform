@@ -1,29 +1,39 @@
-import { useRef } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Loader2,
-  Download,
-  Sparkles,
-  UploadCloud,
-} from "lucide-react";
+import { Loader2, UploadCloud } from "lucide-react";
 import { formatDate } from "../../utils/helpers";
 import {
   useSession,
   useGenerateReport,
   useReplaceAudio,
 } from "../../queries/sessions";
+import api from "../../api/axiosInstance";
 
-// Components
 import TranscriptionBlock from "../../components/SessionDetails/TranscriptionBlock";
 import AudioPlayer from "../../components/SessionDetails/AudioPlayer";
 import ReportSummary from "../../components/Reports/ReportSummary";
+import SessionDetailsHeader from "./SessionDetailsHeader";
+
+const DONE = ["completed", "failed"];
 
 export default function SessionDetailsPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const { data: session, isLoading, isError, refetch } = useSession(sessionId);
+
+  // polling control
+  const [forcePoll, setForcePoll] = useState(false);
+  const [waitingForReport, setWaitingForReport] = useState(false);
+
+  const {
+    data: session,
+    isLoading,
+    isError,
+    refetch,
+  } = useSession(sessionId, {
+    refetchInterval: forcePoll ? 1500 : false, // faster UX
+    refetchIntervalInBackground: true,
+  });
 
   const generateReport = useGenerateReport(sessionId);
   const replaceAudio = useReplaceAudio(sessionId);
@@ -31,11 +41,80 @@ export default function SessionDetailsPage() {
   const generatingReport = generateReport.isPending;
   const uploadingAudio = replaceAudio.isPending;
 
-  const handleGenerateReport = () => generateReport.mutate();
+  const transcriptStatus = session?.transcript?.status;
+  const reportStatus = session?.report?.status;
+
+  const transcriptDone = DONE.includes(transcriptStatus);
+  const reportDone = DONE.includes(reportStatus);
+
+  const transcriptPending = !!session && (!session.transcript || !transcriptDone);
+
+  // If your backend always auto-generates report after transcription, treat missing report as pending
+  const reportPendingAuto = !!session && (!session.report || !reportDone);
+
+  // If user clicked Generate report manually
+  const reportPendingManual =
+    !!session && waitingForReport && (!session.report || !reportDone);
+
+  const showReportPending = reportPendingManual || reportPendingAuto;
+
+  // ✅ AUTO-START POLLING on mount/navigation:
+  // When we arrive from "stop recording", transcript/report aren't ready yet.
+  useEffect(() => {
+    if (!session) return;
+
+    const needsPolling = transcriptPending || showReportPending;
+
+    if (needsPolling) setForcePoll(true);
+    else setForcePoll(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    session?.id,
+    session?.updated_at,
+    transcriptPending,
+    showReportPending,
+  ]);
+
+  // ✅ Stop polling correctly
+  useEffect(() => {
+    if (!forcePoll || !session) return;
+
+    // If waitingForReport, stop only when report exists and done/failed
+    if (waitingForReport) {
+      if (session.report && reportDone) {
+        setForcePoll(false);
+        setWaitingForReport(false);
+      }
+      return;
+    }
+
+    // Auto flow: stop when both are done (or exist+done)
+    if (transcriptDone && session.report && reportDone) {
+      setForcePoll(false);
+    }
+
+    // If transcript is done but report isn't created yet, keep polling (important)
+  }, [
+    forcePoll,
+    waitingForReport,
+    session,
+    transcriptDone,
+    reportDone,
+  ]);
+
+  const handleGenerateReport = () => {
+    setWaitingForReport(true);
+    setForcePoll(true);
+
+    generateReport.mutate(undefined, {
+      onSettled: () => refetch(),
+    });
+  };
 
   const handleReplaceAudio = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     if (
       session?.audio_url &&
       !window.confirm("Replace current audio? This will restart transcription.")
@@ -44,8 +123,31 @@ export default function SessionDetailsPage() {
       return;
     }
 
-    replaceAudio.mutate(file);
+    // after replacing audio, transcription + report will be regenerated
+    setWaitingForReport(false);
+    setForcePoll(true);
+
+    replaceAudio.mutate(file, {
+      onSettled: () => refetch(),
+    });
+
     event.target.value = "";
+  };
+
+  const handleDownloadPdf = async () => {
+    const res = await api.get(`/sessions/${sessionId}/report/pdf/`, {
+      responseType: "blob",
+    });
+
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `therapy_report_session_${sessionId}.pdf`;
+    a.click();
+
+    window.URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -64,7 +166,8 @@ export default function SessionDetailsPage() {
           <button
             className="text-blue-600 underline"
             onClick={() => refetch()}
-            type="button">
+            type="button"
+          >
             Retry
           </button>
         </div>
@@ -72,85 +175,34 @@ export default function SessionDetailsPage() {
     );
   }
 
+  const audioUrl = session.audio_url || session.audio?.audio_url || null;
+
   return (
     <div className="min-h-screen bg-white p-8 mt-6">
-      {/* HEADER */}
-      <header className="flex justify-between items-start mb-8 max-w-6xl mx-auto">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition"
-            type="button"
-          >
-            <ArrowLeft size={20} />
-          </button>
-
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              {session.patient_name || `Patient #${session.patient}`}
-            </h1>
-
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500 uppercase font-medium bg-gray-100 px-2 py-0.5 rounded">
-                Session #{session.id}
-              </span>
-              <span className="text-xs text-gray-500 uppercase font-medium">
-                {formatDate(session.session_date || session.created_at)}
-              </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded uppercase font-bold ${
-                  session.status === "completed"
-                    ? "text-green-600 bg-green-50"
-                    : "text-blue-600 bg-blue-50"
-                }`}
-              >
-                {session.status}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* ACTIONS */}
-        {session.report?.status === "completed" ? (
-          <button
-            onClick={() =>
-              window.open(
-                `http://localhost:8000/api/sessions/${sessionId}/download_pdf/`,
-                "_blank"
-              )
-            }
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
-            type="button"
-          >
-            <Download size={16} /> Download Report
-          </button>
-        ) : (
-          <button
-            onClick={handleGenerateReport}
-            disabled={generatingReport || session.status === "analyzing"}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-5 py-2.5 rounded-xl shadow-md transition font-medium text-sm"
-            type="button"
-          >
-            {generatingReport ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Sparkles size={16} />
-            )}
-            <span>Generate AI Report</span>
-          </button>
-        )}
-      </header>
+      <SessionDetailsHeader
+        meta={{
+          patientLabel: session.patient_name || `Patient #${session.patient}`,
+          sessionLabel: `Session #${session.id}`,
+          dateLabel: formatDate(session.session_date || session.created_at),
+          status: session.status,
+          reportStatus: session.report?.status,
+        }}
+        generatingReport={generatingReport}
+        onBack={() => navigate(-1)}
+        onGenerateReport={handleGenerateReport}
+        onDownloadPdf={handleDownloadPdf}
+      />
 
       <main className="flex flex-col items-center max-w-4xl mx-auto gap-8 pb-20">
-        {/* AUDIO SECTION */}
+        {/* AUDIO */}
         <div className="w-full">
           <h2 className="text-gray-500 text-sm font-medium uppercase mb-3">
             Audio Recording
           </h2>
 
-          {session.audio_url ? (
+          {audioUrl ? (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <AudioPlayer audioUrl={session.audio_url} />
+              <AudioPlayer audioUrl={audioUrl} />
 
               <div className="flex justify-end mt-4 pt-4 border-t border-gray-50">
                 <button
@@ -169,17 +221,14 @@ export default function SessionDetailsPage() {
               </div>
             </div>
           ) : (
-            <div className="p-10 border-2 border-dashed border-gray-200 rounded-2xl text-center bg-gray-50/50 hover:bg-gray-50 transition">
-              <p className="text-gray-500 mb-4 font-medium">
-                No audio recorded for this session yet.
-              </p>
+            <div className="p-10 border-2 border-dashed border-gray-200 rounded-2xl text-center bg-gray-50/50">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAudio}
-                className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm shadow-sm hover:bg-white hover:border-blue-400 hover:text-blue-500 transition disabled:opacity-60"
+                className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm"
                 type="button"
               >
-                {uploadingAudio ? "Uploading..." : "Upload Audio Recording"}
+                Upload Audio Recording
               </button>
             </div>
           )}
@@ -195,21 +244,33 @@ export default function SessionDetailsPage() {
 
         {/* TRANSCRIPT */}
         <div className="w-full">
-          <TranscriptionBlock
-            transcript={
-              session.transcript?.cleaned_transcript
-                ? [{ text: session.transcript.cleaned_transcript }]
-                : []
-            }
-          />
+          {transcriptPending ? (
+            <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-6 text-sm text-gray-600 flex items-center gap-2">
+              <Loader2 className="animate-spin" size={16} />
+              Transcribing...
+            </div>
+          ) : (
+            <TranscriptionBlock
+              transcript={
+                session.transcript?.cleaned_transcript
+                  ? [{ text: session.transcript.cleaned_transcript }]
+                  : []
+              }
+            />
+          )}
         </div>
 
         {/* REPORT */}
-        {session.report && (
-          <div className="w-full">
-            <ReportSummary report={session.report} />
-          </div>
-        )}
+        <div className="w-full">
+          {showReportPending ? (
+            <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-6 text-sm text-gray-600 flex items-center gap-2">
+              <Loader2 className="animate-spin" size={16} />
+              Generating report...
+            </div>
+          ) : session.report ? (
+            <ReportSummary report={session.report} onEdit={() => setEditOpen(true)} />
+          ) : null}
+        </div>
       </main>
     </div>
   );
