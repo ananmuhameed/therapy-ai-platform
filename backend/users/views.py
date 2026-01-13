@@ -8,14 +8,10 @@ from django.contrib.auth import authenticate
 from .serializers import RegisterSerializer, TherapistProfileUpdateSerializer, UserPublicSerializer,TherapistProfileSerializer
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .utils.google import verify_google_access_token
-from .serializers import GoogleLoginSerializer
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 from .models import EmailVerification
 from .tasks import send_verification_email
-from rest_framework.permissions import AllowAny
 from django.shortcuts import get_object_or_404
 
 User = get_user_model()
@@ -141,62 +137,7 @@ class TherapistProfileView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-
-
-class GoogleLoginView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        serializer = GoogleLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        google_user = verify_google_access_token(
-            serializer.validated_data["access_token"]
-        )
-
-        if not google_user:
-            return Response(
-                {"detail": "Invalid Google token"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-        email = google_user.get("email")
-
-        if not email:
-            return Response(
-                {"detail": "Google account has no email"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        user, created = User.objects.get_or_create(
-            email=email,
-            defaults={
-                "first_name": google_user.get("given_name", ""),
-                "last_name": google_user.get("family_name", ""),
-                "is_therapist": True,
-            },
-        )
-
-        # Ensure therapist profile exists
-        TherapistProfile.objects.get_or_create(user=user)
-
-        refresh = RefreshToken.for_user(user)
-
-        return Response(
-            {
-                "access": str(refresh.access_token),
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "full_name": user.get_full_name(),
-                    "is_therapist": user.is_therapist,
-                },
-            },
-            status=status.HTTP_200_OK,
-        )
- # =========================
+# =========================
 # VERIFY EMAIL
 # =========================
 class VerifyEmailView(APIView):

@@ -92,6 +92,8 @@ export default function Login() {
       try {
         const { data } = await api.post("/auth/google/login/", {
           access_token: tokenResponse.access_token,
+          remember_me: formik.values.remember_me,
+
         });
 
         setAuth({

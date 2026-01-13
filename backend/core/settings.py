@@ -96,13 +96,12 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'AUTH_HEADER_TYPES': ('Bearer',),
-
+    'REFRESH_TOKEN_LIFETIME_LONG': timedelta(days=30),
+    
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
 
 }
-REMEMBER_ME_REFRESH_AGE = 365 * 24 * 60 * 60
-DEFAULT_REFRESH_AGE = 24 * 60 * 60
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",

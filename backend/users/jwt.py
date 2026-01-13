@@ -1,7 +1,6 @@
 from django.conf import settings
-from django.contrib.auth import authenticate
-
-from .serializers import UserPublicSerializer
+from django.contrib.auth import authenticate, get_user_model
+from .serializers import UserPublicSerializer, GoogleLoginSerializer
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -10,7 +9,10 @@ from rest_framework.decorators import api_view
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import InvalidToken
+from .utils.google import verify_google_access_token
+from .models import TherapistProfile
 
+User = get_user_model()
 REFRESH_COOKIE = "refresh_token"
 
 def set_refresh_cookie(response, refresh_token: str, max_age: int):
@@ -38,7 +40,7 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
-        remember_me = request.data.get("remember_me", False)
+        remember_me = request.data.get("remember_me", False) # retrieve remember_me flag from the request
 
         user = authenticate(request, username=email, password=password)
         if not user:
@@ -54,18 +56,21 @@ class LoginView(APIView):
             )
 
         refresh = RefreshToken.for_user(user)
-        access = str(refresh.access_token)
 
         if remember_me:
-            max_age = settings.REMEMBER_ME_REFRESH_AGE  # 30 days
+            refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME_LONG"]
         else:
-            max_age = settings.DEFAULT_REFRESH_AGE  # 1 day
+            refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+
+        refresh.set_exp(lifetime=refresh_lifetime)
+
+        access = str(refresh.access_token)
 
         resp = Response(
             {"access": access, "user": UserPublicSerializer(user).data},
             status=status.HTTP_200_OK,
         )
-        set_refresh_cookie(resp, str(refresh), max_age)
+        set_refresh_cookie(resp, str(refresh), max_age=refresh_lifetime.total_seconds())
         return resp
 
 
@@ -83,10 +88,15 @@ class CookieTokenRefreshView(TokenRefreshView):
         # If rotate refresh is enabled, SimpleJWT returns a new refresh in response.data["refresh"]
         new_refresh = response.data.get("refresh")
         if new_refresh:
+            remember_me = request.data.get("remember_me", False)  # You may want to extract this from the request
+            if remember_me:
+                refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME_LONG"]  # 30 days if "Remember Me" is checked
+            else:
+                refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
             set_refresh_cookie(
                 response,
                 new_refresh,
-                max_age=settings.DEFAULT_REFRESH_AGE
+                max_age=refresh_lifetime.total_seconds(),
             )
             del response.data["refresh"]
 
@@ -105,3 +115,60 @@ def logout_view(request):
 
     clear_refresh_cookie(resp)
     return resp
+
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = GoogleLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        remember_me = request.data.get("remember_me", False)
+
+        google_user = verify_google_access_token(serializer.validated_data["access_token"])
+        if not google_user:
+            return Response({"detail": "Invalid Google token"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        email = google_user.get("email")
+        if not email:
+            return Response({"detail": "Google account has no email"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name": google_user.get("given_name", ""),
+                "last_name": google_user.get("family_name", ""),
+                "is_therapist": True,
+            },
+        )
+
+        TherapistProfile.objects.get_or_create(user=user)
+
+        refresh = RefreshToken.for_user(user)
+
+        if remember_me:
+            refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME_LONG"]
+        else:
+            refresh_lifetime = settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"]
+        refresh.set_exp(lifetime=refresh_lifetime)
+
+        access = str(refresh.access_token)
+
+        resp = Response(
+            {
+                "access": access,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "full_name": user.get_full_name(),
+                    "is_therapist": user.is_therapist,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+        set_refresh_cookie(resp, str(refresh), max_age=refresh_lifetime.total_seconds())
+        print("LOGIN VIEW HIT - SETTING COOKIE")
+        resp["x-AUTH-VIEW"] = "cookie-login"
+        return resp

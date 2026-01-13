@@ -51,7 +51,7 @@ export function toLoginPayload(values) {
   return {
     email: String(values.email || "").trim(),
     password: values.password,
-      remember_me: values.remember_me,
+    remember_me: !!values.remember_me,
   };
 }
 
