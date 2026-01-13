@@ -8,7 +8,6 @@ const normalizeList = (data) =>
 async function fetchReportsPrefer() {
   // 1) Try /reports/
   try {
-    const { data } = await api.get("/reports/");
     return { source: "reports", list: normalizeList(data) };
   } catch (err) {
     const status = err?.response?.status;
