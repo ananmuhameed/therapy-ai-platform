@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../api/axiosInstance";
 import { qk } from "./queryKeys";
+import { toast } from "react-toastify";
+import { confirmDialog } from "../utils/confirmDialog";
 
 const normalizeList = (data) => (Array.isArray(data) ? data : data?.results || []);
 
@@ -125,6 +127,49 @@ export function useReplaceAudio(sessionId) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.session(sessionId) });
       qc.invalidateQueries({ queryKey: qk.sessions });
+    },
+  });
+}
+
+export function useDeleteSession(setSessions) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sessionId) => {
+      const result = await confirmDialog({
+        title: "Delete Session?",
+        text: "This action is permanent and cannot be undone.",
+        confirmText: "Yes, delete",
+        confirmColor: "#d33",
+        cancelText: "Cancel",
+        cancelColor: "#cbd5e1",
+      });
+
+      if (!result.isConfirmed) return { cancelled: true };
+
+      await api.delete(`/sessions/${sessionId}/`);
+      return { cancelled: false, sessionId };
+    },
+
+    onSuccess: (res) => {
+      if (res?.cancelled) return;
+
+      // Show success toast
+      toast.success("Session deleted successfully.");
+
+      // Invalidate session cache to refetch
+      qc.invalidateQueries({ queryKey: qk.sessions });
+
+      // Remove the deleted session from the state list (UI update)
+      if (setSessions) {
+        setSessions((prevSessions) =>
+          prevSessions.filter((session) => session.id !== res.sessionId)
+        );
+      }
+    },
+
+    onError: () => {
+      toast.error("Failed to delete session.");
     },
   });
 }

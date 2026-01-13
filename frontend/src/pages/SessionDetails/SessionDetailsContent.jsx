@@ -1,6 +1,4 @@
-import React from "react";
 import { Loader2, UploadCloud } from "lucide-react";
-
 import AudioPlayer from "../../components/SessionDetails/AudioPlayer";
 import TranscriptionBlock from "../../components/SessionDetails/TranscriptionBlock";
 import ReportSummary from "../../components/Reports/ReportSummary";
@@ -10,20 +8,22 @@ export default function SessionDetailsContent({
   session,
   audioUrl,
   hasAudio,
-
   uploadError,
   isUploadingAudio,
   onPickAudio,
   onAudioSelected,
   fileInputRef,
-
-  transcriptItems,
+  transcriptPending,
+  showReportPending,
+  onDeleteSession,
 }) {
+  if (!session) return <div>Loading...</div>;
+
   return (
-    <main className="flex flex-col items-center max-w-4xl mx-auto gap-8 pb-20 text-[rgb(var(--text))]">
+    <main className="flex flex-col items-center max-w-4xl mx-auto gap-8 pb-20">
       {/* AUDIO */}
       <div className="w-full">
-        <h2 className="text-[rgb(var(--text-muted))] text-sm font-medium uppercase mb-3">
+        <h2 className="text-gray-500 text-sm font-medium uppercase mb-3">
           Audio Recording
         </h2>
 
@@ -89,22 +89,44 @@ export default function SessionDetailsContent({
 
       {/* TRANSCRIPT */}
       <div className="w-full">
-        <TranscriptionBlock transcript={transcriptItems || []} />
-        {!transcriptItems && (
-          <p className="text-xs text-[rgb(var(--text-muted))] mt-2">
-            {["transcribing"].includes(session.status)
-              ? "Transcription is in progress…"
-              : "No transcript yet."}
-          </p>
+        {transcriptPending ? (
+          <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-6 text-sm text-gray-600 flex items-center gap-2">
+            <Loader2 className="animate-spin" size={16} />
+            Transcribing...
+          </div>
+        ) : (
+          <TranscriptionBlock
+            transcript={
+              session.transcript?.cleaned_transcript
+                ? [{ text: session.transcript.cleaned_transcript }]
+                : []
+            }
+          />
         )}
       </div>
 
       {/* REPORT */}
-      {session.report && (
-        <div className="w-full">
+      <div className="w-full">
+        {showReportPending ? (
+          <div className="w-full bg-gray-50 border border-gray-200 rounded-2xl p-6 text-sm text-gray-600 flex items-center gap-2">
+            <Loader2 className="animate-spin" size={16} />
+            Generating report...
+          </div>
+        ) : session.report ? (
           <ReportSummary report={session.report} />
-        </div>
-      )}
+        ) : null}
+      </div>
+
+      {/* DELETE */}
+      <div className="flex justify-start mt-6 w-full">
+        <button
+          type="button"
+          onClick={onDeleteSession}
+          className="inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl shadow-md transition font-medium text-sm hover:bg-red-700 disabled:opacity-60"
+        >
+          Delete Session
+        </button>
+      </div>
     </main>
   );
 }
