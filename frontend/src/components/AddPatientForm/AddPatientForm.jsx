@@ -36,7 +36,6 @@ export default function AddPatientForm({ onClose }) {
         throw err;
       }
     },
-
   });
 
   const inputBase =
@@ -48,7 +47,6 @@ export default function AddPatientForm({ onClose }) {
     (formik.touched[name] || formik.submitCount > 0) && formik.errors[name] ? (
       <p className="mt-1 text-xs text-red-400">{formik.errors[name]}</p>
     ) : null;
-
 
   return (
     <div className="w-full max-w-[520px] rounded-2xl bg-[rgb(var(--card))] border border-[rgb(var(--border))] shadow-xl px-4 sm:px-6 pt-6 sm:pt-8 pb-0 text-[rgb(var(--text))]">
@@ -132,8 +130,9 @@ export default function AddPatientForm({ onClose }) {
           {/* Phone */}
           <div>
             <label className={labelBase}>Phone Number</label>
+
             <div className="mt-2 grid grid-cols-[80px_1fr] gap-3">
-              <div className="flex items-center justify-center rounded-xl border border-[rgb(var(--border))] bg-gray-100 text-sm font-semibold">
+              <div className="flex items-center justify-center rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-soft))] text-sm font-semibold text-[rgb(var(--text))]">
                 +20
               </div>
 
