@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Therapy Session Report</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 32px;
+      line-height: 1.6;
+    }
+    h1 {
+      margin-bottom: 24px;
+    }
+    h2 {
+      margin-top: 28px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 6px;
+    }
+    ul {
+      margin-left: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Therapy Session Report</h1>
+
+  <p><strong>Patient:</strong> {{ patient_name }}</p>
+  <p><strong>Date:</strong> {{ session_date }}</p>
+
+  <h2>Executive Summary</h2>
+  <p>{{ summary|linebreaks }}</p>
+
+  <h2>Key Points</h2>
+  <ul>
+    {% for item in key_points %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Risk Flags</h2>
+ {% if risk_flags %}
+  <ul>
+    {% for flag in risk_flags %}
+      <li>{{ flag.type }} ({{ flag.severity }}): {{ flag.note }}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No risk flags identified.</p>
+{% endif %}
+
+  <h2>Treatment Plan</h2>
+  <ul>
+    {% for step in treatment_plan %}
+      <li>{{ step }}</li>
+    {% endfor %}
+  </ul>
+
+  {% if therapist_notes %}
+    <h2>Therapist Notes</h2>
+    <p>{{ therapist_notes|linebreaks }}</p>
+  {% endif %}
+</body>
+</html>

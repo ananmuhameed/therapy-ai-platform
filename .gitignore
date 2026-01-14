@@ -28,3 +28,12 @@ db.sqlite3
 celerybeat-schedule
 backend/celerybeat-schedule
 backend/media/recordings/
+backend/recordings/
+
+# Keep migrations packages, ignore generated migration files
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# optional
+**/migrations/*.pyc
+**/migrations/__pycache__/

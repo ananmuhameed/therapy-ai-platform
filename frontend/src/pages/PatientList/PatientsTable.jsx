@@ -1,7 +1,7 @@
 import React from "react";
 import { FiEye } from "react-icons/fi";
 import GenderPill from "./GenderPill";
-import { calculateAge, classNames } from "../../utils/helpers";
+import { calculateAge, classNames, formatDate } from "../../utils/helpers";
 
 import TableCard from "../../components/ui/TableCard";
 import ClickableRow from "../../components/ui/ClickableRow";
@@ -14,13 +14,21 @@ export default function PatientsTable({
   onClearFilters,
   onAddPatient,
 }) {
+  const formatLastSession = (value) => {
+    if (!value) return "—";
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return String(value);
+    return formatDate(dt, { year: "numeric", month: "short", day: "2-digit" });
+  };
+
   return (
     <TableCard
       columns={[
-        { label: "Patient", className: "col-span-5" },
-        { label: "Gender", className: "col-span-2" },
-        { label: "Age", className: "col-span-2" },
-        { label: "Last session", className: "col-span-2" },
+        { label: "#", className: "col-span-2 text-left" },
+        { label: "Name", className: "col-span-3" },
+        { label: "Gender", className: "col-span-2 text-center" },
+        { label: "Age", className: "col-span-2 text-center" },
+        { label: "Last session", className: "col-span-2 text-center" },
         { label: "Open", className: "col-span-1 text-right" },
       ]}
       loading={loading}
@@ -33,7 +41,7 @@ export default function PatientsTable({
         <div className="flex justify-center gap-2">
           <button
             onClick={onClearFilters}
-            className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--card))] px-4 py-2 text-sm font-medium text-[rgb(var(--text))] border border-[rgb(var(--border))] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer transition-colors"
             type="button"
           >
             Clear filters
@@ -41,7 +49,7 @@ export default function PatientsTable({
 
           <button
             onClick={onAddPatient}
-            className="inline-flex items-center gap-2 rounded-full bg-[#3078E2] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--primary))] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer transition-colors"
             type="button"
           >
             Add Patient
@@ -49,12 +57,23 @@ export default function PatientsTable({
         </div>
       }
     >
-      {patients.map((p) => {
+      {patients.map((p, index) => {
         const name = p.full_name || p.name || "—";
         const age = p.age ?? calculateAge(p.date_of_birth);
-        const lastSession = p.last_session || p.last_session_date || p.lastSession || "—";
+
+        const lastSessionRaw =
+          p.last_session_date ??
+          p.last_session ??
+          p.lastSessionDate ??
+          p.lastSession ??
+          p.last_session_created_at ??
+          p.lastSessionCreatedAt ??
+          null;
+
+        const lastSession = formatLastSession(lastSessionRaw);
 
         const canOpen = Boolean(onViewProfile);
+
         return (
           <ClickableRow
             key={p.id}
@@ -62,20 +81,27 @@ export default function PatientsTable({
             onOpen={() => onViewProfile?.(p)}
             title="Open patient profile"
           >
-            <div className="col-span-5 min-w-0">
-              <div className="text-sm text-gray-900 font-medium truncate">{name}</div>
-              <div className="mt-0.5 text-xs text-gray-500 font-normal">
-                ID: <span className="font-mono">{p.id}</span>
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))] text-left font-mono">
+              {index + 1}
+            </div>
+
+            <div className="col-span-3 min-w-0">
+              <div className="text-sm text-[rgb(var(--text))] font-medium truncate">
+                {name}
               </div>
             </div>
 
-            <div className="col-span-2">
+            <div className="col-span-2 text-center">
               <GenderPill gender={p.gender} />
             </div>
 
-            <div className="col-span-2 text-sm text-gray-700">{age}</div>
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))] text-center">
+              {age ?? "—"}
+            </div>
 
-            <div className="col-span-2 text-sm text-gray-700 truncate">{lastSession}</div>
+            <div className="col-span-2 text-sm text-[rgb(var(--text-muted))] truncate text-center">
+              {lastSession}
+            </div>
 
             <div className="col-span-1 flex justify-end">
               <button
@@ -84,8 +110,8 @@ export default function PatientsTable({
                   onViewProfile?.(p);
                 }}
                 className={classNames(
-                  "inline-flex items-center justify-center rounded-full p-2",
-                  "text-[#3078E2] hover:bg-[#3078E2]/10 cursor-pointer"
+                  "inline-flex items-center justify-center rounded-full p-2 transition-colors",
+                  "text-[rgb(var(--primary))] hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
                 )}
                 aria-label="View"
                 title="View"

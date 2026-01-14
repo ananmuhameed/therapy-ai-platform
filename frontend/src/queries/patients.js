@@ -28,4 +28,32 @@ export function useCreatePatient() {
   });
 }
 
+export function useDeletePatient() {
+  const queryClient = useQueryClient();
 
+  return useMutation({
+    mutationFn: async (id) => {
+      await api.delete(`/patients/${id}/`); 
+      return id;
+    },
+
+    onSuccess: (deletedId) => {
+      // 1) remove from cache instantly
+      queryClient.setQueryData(qk.patients, (old) => {
+        if (!old) return old;
+
+        // if API returns array
+        if (Array.isArray(old)) return old.filter((p) => String(p.id) !== String(deletedId));
+
+        // if API returns paginated { results: [] }
+        return {
+          ...old,
+          results: (old.results || []).filter((p) => p.id !== deletedId),
+        };
+      });
+
+      // 2) optional: refetch to be 100% in sync with server
+      queryClient.invalidateQueries({ queryKey: qk.patients });
+    },
+  });
+}

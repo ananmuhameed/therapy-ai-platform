@@ -5,11 +5,11 @@ export default function BackButton({ onClick }) {
   return (
     <button
       onClick={onClick}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--card))] text-[rgb(var(--text))] border border-[rgb(var(--border))] shadow-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
       aria-label="Back"
       type="button"
     >
-      <FiArrowLeft className="text-[#3078E2]" size={20} />
+      <FiArrowLeft className="text-[rgb(var(--primary))]" size={20} />
     </button>
   );
 }

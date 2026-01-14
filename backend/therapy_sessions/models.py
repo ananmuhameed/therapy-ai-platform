@@ -121,10 +121,14 @@ class SessionReport(TimeStampedModel):
     )
 
     generated_summary = models.TextField(blank=True)
-    key_points = models.TextField(blank=True)
-    risk_flags = models.TextField(blank=True)
-    treatment_plan = models.TextField(blank=True)
+
+    # ✅ FINAL JSON FIELDS
+    key_points = models.JSONField(default=list, blank=True)
+    risk_flags = models.JSONField(default=list, blank=True)
+    treatment_plan = models.JSONField(default=list, blank=True)
+
     therapist_notes = models.TextField(blank=True)
+    session_notes = models.TextField(blank=True, default="")
 
     status = models.CharField(
         max_length=20,

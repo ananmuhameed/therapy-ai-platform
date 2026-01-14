@@ -32,18 +32,22 @@ export default function SessionsTable({ loading, error, sessions, onOpen }) {
             onOpen={() => onOpen(s.openPath)}
             title={canOpen ? "Open session" : "No session to open"}
           >
-            <div className="col-span-1 text-sm text-gray-700">{s.indexLabel}</div>
+            <div className="col-span-1 text-sm text-[rgb(var(--text-muted))]">
+              {s.indexLabel}
+            </div>
 
             <div className="col-span-5 min-w-0">
-              <div className="text-sm text-gray-900 font-medium truncate">
+              <div className="text-sm text-[rgb(var(--text))] font-medium truncate">
                 {s.patientName}
               </div>
-              <div className="mt-0.5 text-xs text-gray-500 font-normal">
+              <div className="mt-0.5 text-xs text-[rgb(var(--text-muted))] font-normal">
                 Session ID: <span className="font-mono">{s.id}</span>
               </div>
             </div>
 
-            <div className="col-span-3 text-sm text-gray-700">{s.date}</div>
+            <div className="col-span-3 text-sm text-[rgb(var(--text-muted))]">
+              {s.date}
+            </div>
 
             <div className="col-span-2">
               <StatusPill status={s.status} />
@@ -57,10 +61,10 @@ export default function SessionsTable({ loading, error, sessions, onOpen }) {
                 }}
                 disabled={!canOpen}
                 className={classNames(
-                  "inline-flex items-center justify-center rounded-full p-2",
+                  "inline-flex items-center justify-center rounded-full p-2 transition",
                   canOpen
-                    ? "text-[#3078E2] hover:bg-[#3078E2]/10 cursor-pointer"
-                    : "text-gray-300 cursor-not-allowed"
+                    ? "text-[rgb(var(--primary))] hover:bg-[rgb(var(--primary))]/10 cursor-pointer"
+                    : "text-gray-500 cursor-not-allowed"
                 )}
                 aria-label="View"
                 title="View"
