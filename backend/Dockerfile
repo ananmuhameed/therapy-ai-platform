@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY . /app/
 
 # Ensure entrypoint.sh is executable
-RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.prod.sh
 
 # Expose port 8000 for the web server
 EXPOSE 8000
