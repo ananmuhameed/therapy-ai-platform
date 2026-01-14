@@ -5,6 +5,8 @@ from .models import Patient
 
 class PatientSerializer(serializers.ModelSerializer):
     therapist = serializers.PrimaryKeyRelatedField(read_only=True)
+    contact_email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
+
 
     contact_email = serializers.EmailField(required=False, allow_blank=True)
     contact_phone = serializers.CharField(required=False, allow_blank=True)
@@ -16,6 +18,7 @@ class PatientSerializer(serializers.ModelSerializer):
             "id",
             "therapist",
             "full_name",
+            "patient_id",
             "gender",
             "date_of_birth",
             "contact_phone",
