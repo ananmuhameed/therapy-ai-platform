@@ -1,4 +1,4 @@
-import { FiEye, FiTrash2 } from "react-icons/fi";
+import { FiEye, FiTrash2, FiPlus } from "react-icons/fi";
 import { classNames } from "../../utils/helpers";
 import StatusPill from "../../components/ui/StatusPill";
 import Skeleton from "../../components/ui/Skeleton";
@@ -10,6 +10,7 @@ export default function SessionsCard({
   error,
   onOpenSession,
   onDeleteSession,
+  onCreateSession,
 }) {
   const cardBase = "rounded-2xl bg-white shadow-sm ring-1 ring-gray-100";
 
@@ -17,8 +18,25 @@ export default function SessionsCard({
     <div className={classNames(cardBase, "p-6 lg:col-span-2")}>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900">Sessions</h2>
-        <span className="text-xs text-gray-500">{sessions.length} total</span>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500">{sessions.length} total</span>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateSession?.();
+            }}
+            className="inline-flex items-center gap-2 rounded-full bg-[#3078E2] px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:brightness-95 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={!onCreateSession}
+            title="Create a new session"
+          >
+            <FiPlus /> Create
+          </button>
+        </div>
       </div>
+
 
       {/* Table header */}
       <div className="grid grid-cols-12 text-xs font-medium text-gray-500 px-3 pb-2">
@@ -49,8 +67,19 @@ export default function SessionsCard({
             <p className="mt-1 text-xs text-gray-500">
               Create a new session for this patient to start the workflow.
             </p>
+
+            {onCreateSession && (
+              <button
+                type="button"
+                onClick={onCreateSession}
+                className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#3078E2] px-4 py-2 text-sm font-medium text-white shadow-sm hover:brightness-95 active:brightness-90"
+              >
+                <FiPlus /> Create Session
+              </button>
+            )}
           </div>
         )}
+
 
         {!loading &&
           !error &&
