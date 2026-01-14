@@ -19,8 +19,6 @@ from therapy_sessions.serializers.audio import SessionAudioUploadSerializer
 from therapy_sessions.serializers.audio_multipart import ( MultipartPresignSerializer, MultipartCompleteSerializer)
 from therapy_sessions.services.s3.s3_client import s3_client, s3_bucket
 from therapy_sessions.services.s3.storage_key import session_audio_key 
-
-from therapy_sessions.throttles import UploadAudioRateThrottle
 from django.http import FileResponse, Http404
 from therapy_sessions.services.reporting.pdf import generate_report_pdf
 from therapy_sessions.serializers.report import (
@@ -61,7 +59,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You can only create sessions for your own patients.")
         serializer.save(therapist=self.request.user)
 
-    @action(detail=True, methods=["post"], url_path="upload-audio", throttle_classes=[UploadAudioRateThrottle])
+    @action(detail=True, methods=["post"], url_path="upload-audio")
     def upload_audio(self, request, pk=None):
         session = self.get_object()
 
@@ -123,8 +121,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
         return Response({"url": url})
 
 
-
-    @action(detail=True, methods=["post"], url_path="replace-audio", throttle_classes=[UploadAudioRateThrottle])
+    @action(detail=True, methods=["post"], url_path="replace-audio")
     def replace_audio(self, request, pk=None):
         session = self.get_object()
 
@@ -216,7 +213,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
 # --------------------- AWS S3 MULTIPART UPLOADS ---------------------
     
 
-    @action(detail=True, methods=["post"], url_path="audio/multipart/start", throttle_classes=[UploadAudioRateThrottle])
+    @action(detail=True, methods=["post"], url_path="audio/multipart/start")
     def audio_multipart_start(self, request, pk=None):
         session = self.get_object()
 
@@ -254,7 +251,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
 
         return Response({"uploadId": upload_id, "key": key, "partSize": MULTIPART_PART_SIZE}, status=201)
 
-    @action(detail=True, methods=["post"], url_path="audio/multipart/presign", throttle_classes=[UploadAudioRateThrottle])
+    @action(detail=True, methods=["post"], url_path="audio/multipart/presign")
     def audio_multipart_presign(self, request, pk=None):
         session = self.get_object()
 
@@ -284,7 +281,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
         )
         return Response({"url": url, "partNumber": part_number}, status=200)
 
-    @action(detail=True, methods=["post"], url_path="audio/multipart/complete", throttle_classes=[UploadAudioRateThrottle])
+    @action(detail=True, methods=["post"], url_path="audio/multipart/complete")
     def audio_multipart_complete(self, request, pk=None):
         session = self.get_object()
 
@@ -337,7 +334,7 @@ class TherapySessionViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "Upload completed. Transcription started.", "audio_id": audio.id}, status=201)
 
-    @action(detail=True, methods=["post"], url_path="audio/multipart/abort" , throttle_classes=[UploadAudioRateThrottle])
+    @action(detail=True, methods=["post"], url_path="audio/multipart/abort")
     def audio_multipart_abort(self, request, pk=None):
         session = self.get_object()
 

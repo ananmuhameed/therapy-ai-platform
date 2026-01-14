@@ -90,18 +90,6 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-
-    'DEFAULT_THROTTLE_CLASSES': (
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
-    ),
-
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '20/min',
-        'user': '100/min',
-        'auth': '5/min', # Custom throttle rate for authentication endpoints
-        'upload_audio': '2/min', # Custom throttle rate for audio uploads
-    },
 }
 
 SIMPLE_JWT = {
