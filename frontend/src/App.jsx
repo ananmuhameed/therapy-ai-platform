@@ -15,7 +15,7 @@ import SessionsPage from "./pages/SessionsList/SessionsPage";
 import ReportsPage from "./pages/Report/ReportsPage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import VerifyEmail from "./pages/VerifyEmai/VerifyEmail";
+import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
 import Home from "../Home/pages/Home/Home";
 import LandingLayout from "../Home/Layout/Landinglayout";
 import FeaturesPage from "../Home/pages/Features/FeaturesPage";

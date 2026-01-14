@@ -1,10 +1,9 @@
 import React from "react";
 import { FiEye } from "react-icons/fi";
-import { classNames } from "../../utils/helpers";
 import StatusPill from "../../components/ui/StatusPill";
 import TableCard from "../../components/ui/TableCard";
 import ClickableRow from "../../components/ui/ClickableRow";
-
+import { classNames } from "../../utils/helpers";
 export default function ReportsTable({ loading, error, reports, onOpen }) {
   return (
     <TableCard
