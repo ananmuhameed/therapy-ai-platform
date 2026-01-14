@@ -10,6 +10,7 @@ class PatientSerializer(serializers.ModelSerializer):
             "id",
             "therapist",
             "full_name",
+            "patient_id",
             "gender",
             "date_of_birth",
             "contact_phone",

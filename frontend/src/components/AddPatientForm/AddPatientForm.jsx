@@ -12,9 +12,9 @@ export default function AddPatientForm({ onClose }) {
   const createPatient = useCreatePatient();
   const { formik, apiError } = useAppFormik({
     initialValues: {
+      patientId: "",
       fullName: "",
       email: "",
-      countryCode: "+20",
       phone: "",
       gender: "",
       dob: "",
@@ -84,6 +84,25 @@ export default function AddPatientForm({ onClose }) {
             {fieldError("fullName")}
           </div>
 
+          {/* National ID */}
+          <div>
+            <label className={labelBase}>National ID</label>
+            <input
+              className={`${inputBase} mt-2`}
+              name="patientId"
+              placeholder="14-digit National ID"
+              value={formik.values.patientId}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "");
+                formik.setFieldValue("patientId", value);
+              }}
+              onBlur={formik.handleBlur}
+              maxLength={14}
+              inputMode="numeric"
+            />
+            {fieldError("patientId")}
+          </div>
+
           {/* Email */}
           <div>
             <label className={labelBase}>E-mail</label>
@@ -102,29 +121,22 @@ export default function AddPatientForm({ onClose }) {
           {/* Phone */}
           <div>
             <label className={labelBase}>Phone Number</label>
-            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-3">
-              <select
-                className={inputBase}
-                name="countryCode"
-                value={formik.values.countryCode}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-              >
-                <option value="+20">+20</option>
-                <option value="+966">+966</option>
-                <option value="+971">+971</option>
-              </select>
+            <div className="mt-2 grid grid-cols-[80px_1fr] gap-3">
+              <div className="flex items-center justify-center rounded-xl border border-[rgb(var(--border))] bg-gray-100 text-sm font-semibold">
+                +20
+              </div>
 
               <input
                 className={inputBase}
                 type="tel"
                 name="phone"
-                placeholder="1234567890"
+                placeholder="01XXXXXXXXX"
                 value={formik.values.phone}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
               />
             </div>
+
             {fieldError("phone")}
           </div>
 
