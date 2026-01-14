@@ -3,6 +3,7 @@ import { classNames } from "../../utils/helpers";
 import StatusPill from "../../components/ui/StatusPill";
 import Skeleton from "../../components/ui/Skeleton";
 
+
 export default function SessionsCard({
   sessions,
   loading,
@@ -47,6 +48,7 @@ export default function SessionsCard({
           </button>
         </div>
       </div>
+
 
       {/* Table header */}
       <div

@@ -53,6 +53,10 @@ export default function SessionPage() {
 
   // Fetch patients
   const { data: patients = [], isLoading: patientsLoading } = usePatients();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pid = params.get("patientId");
+    if (!pid) return;
 
   // Read patientId from query params once patients are loaded
   useEffect(() => {

@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
-import { formatDate, classNames } from "../../utils/helpers";
+import { formatDate } from "../../utils/helpers";
 import { useDeleteSession } from "../../queries/sessions";
+import { FiTrash2, FiEdit, FiArrowLeft } from "react-icons/fi";
 import { useDeletePatient } from "../../queries/patients";
 
-// Icons
-import { FiTrash2, FiEdit, FiArrowLeft, FiCheck, FiX } from "react-icons/fi";
+
 
 // Components
 import Skeleton from "../../components/ui/Skeleton";
@@ -22,7 +22,8 @@ export default function PatientProfile() {
   const deletePatient = useDeletePatient();
   const navigate = useNavigate();
   const { patientId } = useParams();
-
+  
+  
   // --- State ---
   const [isEditing, setIsEditing] = useState(false);
   const [patient, setPatient] = useState({
@@ -39,7 +40,7 @@ export default function PatientProfile() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState("");
@@ -75,8 +76,12 @@ export default function PatientProfile() {
           const filtered = allSessions
             .filter((s) => Number(s.patient) === pid)
             .sort((a, b) => {
-              const ta = new Date(a?.session_date || a?.created_at || 0).getTime();
-              const tb = new Date(b?.session_date || b?.created_at || 0).getTime();
+              const ta = new Date(
+                a?.session_date || a?.created_at || 0
+              ).getTime();
+              const tb = new Date(
+                b?.session_date || b?.created_at || 0
+              ).getTime();
               return tb - ta;
             });
 

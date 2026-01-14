@@ -144,6 +144,13 @@ def transcribe_session(self, session_id: int):
         except Exception:
             pass
 
+    finally:
+        try:
+            if audio_path and os.path.exists(audio_path):
+                os.remove(audio_path)
+        except Exception:
+            pass
+
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def generate_session_report(self, session_id: int):
