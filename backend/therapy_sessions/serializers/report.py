@@ -47,6 +47,7 @@ class SessionReportSerializer(serializers.ModelSerializer):
             "risk_flags",
             "treatment_plan",
             "therapist_notes",
+            "session_notes",
             "status",
             "model_name",
             "created_at",
@@ -69,4 +70,5 @@ class SessionReportUpdateSerializer(serializers.ModelSerializer):
             "risk_flags",
             "treatment_plan",
             "therapist_notes",
+            "session_notes",
         ]
