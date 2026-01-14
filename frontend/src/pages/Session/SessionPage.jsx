@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../api/axiosInstance";
 import { usePatients } from "../../queries/patients";
 
@@ -18,6 +17,7 @@ import {
 
 export default function SessionPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // --- Refs ---
   const fileInputRef = useRef(null);
@@ -53,13 +53,37 @@ export default function SessionPage() {
 
   // Fetch patients using React Query
   const { data: patients = [], isLoading: patientsLoading } = usePatients();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pid = params.get("patientId");
+    if (!pid) return;
+
+    if (patientsLoading) return;
+
+    const exists = patients.some((p) => String(p.id) === String(pid));
+
+    if (exists) {
+      setSelectedPatientId(String(pid));
+
+      // optional: clean URL so it doesn't force selection again
+      params.delete("patientId");
+      navigate(
+        { pathname: location.pathname, search: params.toString() },
+        { replace: true }
+      );
+    } else {
+      setUploadError("Selected patient not found or not accessible.");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientsLoading, patients, location.search]);
+
 
   const stopMicStream = () => {
     try {
       const s = streamRef.current;
       if (!s) return;
       s.getTracks().forEach((t) => t.stop());
-    } catch {}
+    } catch { }
     streamRef.current = null;
     setMicStream(null);
   };
@@ -102,13 +126,13 @@ export default function SessionPage() {
     return () => {
       try {
         if (timerRef.current) clearInterval(timerRef.current);
-      } catch {}
+      } catch { }
       timerRef.current = null;
 
       try {
         const r = mediaRecorderRef.current;
         if (r && r.state !== "inactive") r.stop();
-      } catch {}
+      } catch { }
 
       stopMicStream();
     };
@@ -253,17 +277,17 @@ export default function SessionPage() {
         r.onstop = null; // prevent navigation/upload finalize
         r.stop();
       }
-    } catch {}
+    } catch { }
 
     stopMicStream();
 
     // end chunk source + cancel upload if supported
     try {
       sourceRef.current?.markDone?.();
-    } catch {}
+    } catch { }
     try {
       cancelUploadRef.current?.();
-    } catch {}
+    } catch { }
 
     // cleanup refs
     const sid = currentSessionIdRef.current;
@@ -301,11 +325,11 @@ export default function SessionPage() {
     // flush last chunk then stop
     try {
       if (r.state === "recording") r.requestData();
-    } catch {}
+    } catch { }
 
     try {
       r.stop();
-    } catch {}
+    } catch { }
   };
 
   // Pause recording
@@ -316,7 +340,7 @@ export default function SessionPage() {
         r.pause();
         setIsPaused(true);
         pauseTimer();
-      } catch {}
+      } catch { }
     }
   };
 
@@ -328,7 +352,7 @@ export default function SessionPage() {
         r.resume();
         setIsPaused(false);
         startTimer();
-      } catch {}
+      } catch { }
     }
   };
 
