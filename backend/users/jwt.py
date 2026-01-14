@@ -23,7 +23,7 @@ def set_refresh_cookie(response, refresh_token: str, max_age: int):
         value=refresh_token,
         httponly=True,
         secure=not settings.DEBUG,  # dev http => False, prod https => True
-        samesite="Lax",             # if frontend+backend on different domains, you may need "None" + Secure=True
+        samesite="None",             # if frontend+backend on different domains, you may need "None" + Secure=True
         path="/api/v1/auth/",
         max_age=max_age,
     )
