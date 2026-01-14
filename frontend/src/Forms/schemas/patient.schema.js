@@ -19,23 +19,28 @@ export const patientCreateSchema = Yup.object({
     .email("Invalid email")
     .nullable()
     .notRequired(),
- phone: Yup.string()
-  .required("Phone is required")
-  .test(
-    "egyptian-mobile",
-    "Egyptian mobile number must start with (010, 011, 012, or 015)",
-    (value) => {
-      if (!value) return false;
-      if (!/^\d+$/.test(value)) return false;
-      if (value.length === 11) {
-        return ["010", "011", "012", "015"].includes(value.slice(0, 3));
+
+  countryCode: Yup.string().required("Country code is required"),
+
+  phone: Yup.string()
+    .required("Phone number is required")
+    .transform((v) => (v ? v.replace(/\D/g, "") : ""))
+    .test(
+      "len-10-or-11",
+      "Enter an Egyptian mobile number with 10 or 11 digits",
+      (v) => !v || v.length === 10 || v.length === 11
+    )
+    .test(
+      "eg-prefix",
+      "Mobile number must start with 010, 011, 012, or 015",
+      (v) => {
+        if (!v) return false;
+        if (v.length === 11) return /^(010|011|012|015)\d{8}$/.test(v);
+        if (v.length === 10) return /^(10|11|12|15)\d{8}$/.test(v);
+        return false;
       }
-      if (value.length === 10) {
-        return ["10", "11", "12", "15"].includes(value.slice(0, 2));
-      }
-      return false;
-    }
-  ),
+    ),
+
 
 
   gender: Yup.string()
@@ -73,13 +78,15 @@ export function mapPatientFieldErrors(fe = {}) {
   return out;
 }
 
-/* api payload*/
+
 export function toPatientCreatePayload(values) {
+  const raw = (values.phone || "").replace(/\D/g, "");
+  const normalized = raw.startsWith("0") ? raw.slice(1) : raw;
   return {
     full_name: values.fullName,
     patient_id: values.patientId,
     contact_email: values.email?.trim() ? values.email.trim() : null,
-    contact_phone: `${values.countryCode}${values.phone}`,
+    contact_phone: `${values.countryCode}${normalized}`,
     gender: values.gender,
     date_of_birth: values.dob,
     notes: values.notes,

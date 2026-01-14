@@ -3,6 +3,8 @@ from .models import Patient
 
 class PatientSerializer(serializers.ModelSerializer):
     therapist = serializers.PrimaryKeyRelatedField(read_only=True)
+    contact_email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
+
 
     class Meta:
         model = Patient

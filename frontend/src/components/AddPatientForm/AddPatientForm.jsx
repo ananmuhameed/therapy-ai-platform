@@ -13,6 +13,7 @@ export default function AddPatientForm({ onClose }) {
   const { formik, apiError } = useAppFormik({
     initialValues: {
       patientId: "",
+      countryCode: "+20",
       fullName: "",
       email: "",
       phone: "",
@@ -23,7 +24,9 @@ export default function AddPatientForm({ onClose }) {
     validationSchema: patientCreateSchema,
     mapFieldErrors: mapPatientFieldErrors,
     onSubmit: async (values) => {
+      console.log("SUBMIT", values);
       const payload = toPatientCreatePayload(values);
+      console.log("PAYLOAD", payload);
       await createPatient.mutateAsync(payload);
       onClose?.(true);
     },
@@ -35,9 +38,10 @@ export default function AddPatientForm({ onClose }) {
   const labelBase = "text-sm font-semibold text-[rgb(var(--text))]";
 
   const fieldError = (name) =>
-    formik.touched[name] && formik.errors[name] ? (
+    (formik.touched[name] || formik.submitCount > 0) && formik.errors[name] ? (
       <p className="mt-1 text-xs text-red-400">{formik.errors[name]}</p>
     ) : null;
+
 
   return (
     <div className="w-full max-w-[520px] rounded-2xl bg-[rgb(var(--card))] border border-[rgb(var(--border))] shadow-xl px-4 sm:px-6 pt-6 sm:pt-8 pb-0 text-[rgb(var(--text))]">
