@@ -1,9 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Play,
-  Pause,
-  Volume2,
-} from "lucide-react";
+import { Play, Pause, Volume2 } from "lucide-react";
 
 export default function AudioPlayer({ audioUrl }) {
   const audioRef = useRef(null);
@@ -14,60 +10,118 @@ export default function AudioPlayer({ audioUrl }) {
   const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
 
+  // Helper: set duration safely
+  const updateDuration = (audio) => {
+    const d = audio?.duration;
+    setDuration(Number.isFinite(d) ? d : 0);
+  };
+
   /* ---------- AUDIO EVENTS ---------- */
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
-    const onLoaded = () => setDuration(audio.duration || 0);
+    // Reset UI for new audio source
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+
+    const fixInfinityDuration = async () => {
+      // WebM/Opus sometimes gives Infinity until you force a seek
+      if (audio.duration === Infinity) {
+        try {
+          audio.currentTime = 1e101; // jump far to force duration calculation
+          await new Promise((r) => setTimeout(r, 60));
+          audio.currentTime = 0;
+        } catch {}
+      }
+    };
+
+    const onLoadedMetadata = async () => {
+      await fixInfinityDuration();
+      updateDuration(audio);
+    };
+
+    const onDurationChange = () => updateDuration(audio);
+
     const onEnded = () => {
-      setCurrentTime(audio.duration);
+      setCurrentTime(audio.duration || currentTime);
       setIsPlaying(false);
     };
 
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+
     audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("loadedmetadata", onLoaded);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("durationchange", onDurationChange);
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+
+    // Also apply persisted controls
+    audio.volume = volume;
+    audio.playbackRate = speed;
 
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("loadedmetadata", onLoaded);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("durationchange", onDurationChange);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
     };
-  }, []);
+    // IMPORTANT: re-run when audioUrl changes
+  }, [audioUrl]); // ✅ not []
 
   /* ---------- CONTROLS ---------- */
-  const togglePlay = () => {
+  const togglePlay = async () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (audio.paused) {
-      audio.play();
-      setIsPlaying(true);
-    } else {
-      audio.pause();
+    try {
+      if (audio.paused) {
+        await audio.play();
+      } else {
+        audio.pause();
+      }
+    } catch (e) {
+      // autoplay restrictions / decode errors
+      console.error("Audio play failed:", e);
       setIsPlaying(false);
     }
   };
 
   const handleSeek = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     const value = Number(e.target.value);
-    audioRef.current.currentTime = value;
+    audio.currentTime = value;
     setCurrentTime(value);
   };
 
   const handleVolume = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     const value = Number(e.target.value);
-    audioRef.current.volume = value;
+    audio.volume = value;
     setVolume(value);
   };
 
   const handleSpeed = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
     const value = Number(e.target.value);
-    audioRef.current.playbackRate = value;
+    audio.playbackRate = value;
     setSpeed(value);
   };
+
+  const max = duration > 0 ? duration : 0;
 
   return (
     <div className="space-y-4">
@@ -86,15 +140,15 @@ export default function AudioPlayer({ audioUrl }) {
         <input
           type="range"
           min="0"
-          max={duration || 0}
+          max={max}
           step="0.1"
-          value={currentTime}
+          value={Math.min(currentTime, max)}
           onChange={handleSeek}
           className="flex-1"
         />
 
-        <span className="text-xs text-gray-400 w-14 text-right">
-          {Math.floor(currentTime)}s
+        <span className="text-xs text-gray-400 w-20 text-right">
+          {Math.floor(currentTime)}s / {Math.floor(duration)}s
         </span>
       </div>
 
