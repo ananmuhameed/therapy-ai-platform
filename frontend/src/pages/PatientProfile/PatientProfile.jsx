@@ -4,6 +4,8 @@ import api from "../../api/axiosInstance";
 import { formatDate } from "../../utils/helpers";
 import { useDeleteSession } from "../../queries/sessions";
 import { FiTrash2, FiEdit, FiArrowLeft } from "react-icons/fi";
+import { useDeletePatient } from "../../queries/patients";
+
 
 
 // Components
@@ -17,6 +19,7 @@ import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 
 export default function PatientProfile() {
+  const deletePatient = useDeletePatient();
   const navigate = useNavigate();
   const { patientId } = useParams();
   
@@ -157,73 +160,40 @@ export default function PatientProfile() {
     }
   };
 
-  const handleCancel = async () => {
-    // If nothing changed, just exit edit mode
-    if (!isDirty) {
-      setIsEditing(false);
-      return;
-    }
-    const res = await Swal.fire({
-      title: "Discard changes?",
-      text: "Your unsaved changes will be lost.",
-      icon: "warning",
-      iconColor: "#2563eb",
-      width: "420px",
-      padding: "1.5rem",
-      showCancelButton: true,
-      confirmButtonColor: "#64748b",
-      cancelButtonColor: "#cbd5e1",
-      confirmButtonText: "Discard",
-      cancelButtonText: "Keep editing",
-      reverseButtons: true,
-      customClass: {
-        popup: "rounded-2xl",
-        confirmButton: "rounded-xl",
-        cancelButton: "rounded-xl",
-      },
-    });
-
-    if (!res.isConfirmed) return;
-
-    // Restore saved snapshot
-    if (savedPatient) setPatient(savedPatient);
-    setIsEditing(false);
-    toast.info("Changes discarded");
-  };
-
   const handleDelete = async () => {
-    const result = await Swal.fire({
-      title: "Delete Patient?",
-      text: "This action is permanent and cannot be undone.",
-      icon: "warning",
-      iconColor: "#2563eb",
-      width: "400px",
-      padding: "1.5rem",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#cbd5e1",
-      confirmButtonText: "Yes, delete",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      customClass: {
-        popup: "rounded-2xl",
-        confirmButton: "rounded-xl",
-        cancelButton: "rounded-xl",
-      },
-    });
+  const result = await Swal.fire({
+    title: "Delete Patient?",
+    text: "This action is permanent and cannot be undone.",
+    icon: "warning",
+    iconColor: "#2563eb",
+    width: "400px",
+    padding: "1.5rem",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#cbd5e1",
+    confirmButtonText: "Yes, delete",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+    customClass: {
+      popup: "rounded-2xl",
+      confirmButton: "rounded-xl",
+      cancelButton: "rounded-xl",
+    },
+  });
 
-    if (!result.isConfirmed) return;
+  if (!result.isConfirmed) return;
 
-    try {
-      await api.delete(`/patients/${patientId}/`);
-      toast.success("Patient deleted successfully");
-      navigate("/patients");
-    } catch (err) {
-      console.error(err);
-      setError("Failed to delete patient.");
-      toast.error("Failed to delete patient");
-    }
-  };
+  try {
+    await deletePatient.mutateAsync(patientId);
+    toast.success("Patient deleted successfully");
+    navigate("/patients");
+  } catch (err) {
+    console.error(err);
+    setError("Failed to delete patient.");
+    toast.error("Failed to delete patient");
+  }
+};
+
 
   // --- Render ---
   if (loading) {
