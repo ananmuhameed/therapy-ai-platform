@@ -1,0 +1,62 @@
+import {
+  FileText,
+  Mic,
+  Download,
+  Headphones,
+  Shield,
+  BarChart,
+  User,
+} from "lucide-react";
+
+export const plans = [
+  {
+    id: "free",
+    name: "Free",
+    priceMonthly: 0,
+    priceYearly: 0,
+    description: "Perfect for trying the platform",
+    features: [
+      { label: "1-hour session limit", icon: Headphones },
+      { label: "AI report summary", icon: FileText },
+      { label: "Executive summary", icon: FileText },
+      { label: "Limited history", icon: BarChart },
+      { label: "Community support", icon: Shield },
+    ],
+    cta: "Start Free",
+    highlight: false,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    priceMonthly: 19,
+    priceYearly: 190,
+    description: "For professionals & clinics",
+    features: [
+      { label: "Unlimited sessions", icon: Headphones },
+      { label: "Full AI reports", icon: FileText },
+      { label: "Session recording", icon: Mic },
+      { label: "Downloadable summaries", icon: Download },
+      { label: "Advanced analytics", icon: BarChart },
+    ],
+    cta: "Upgrade Now",
+    highlight: true,
+  },
+   {
+    id: "Enterprise",
+    name: "Enterprise",
+    priceMonthly: 49,
+    priceYearly: 490,
+    description: "For organizations",
+    features: [
+      { label: "Unlimited sessions", icon: Headphones },
+      { label: "Full AI reports", icon: FileText },
+      { label: "Session recording", icon: Mic },
+      { label: "Downloadable summaries", icon: Download },
+      { label: "Advanced analytics", icon: BarChart },
+      { label: "Data sharing", icon: Shield },
+      {label: "Multible users access", icon: User },
+    ],
+    cta: "Upgrade Now",
+    highlight: true,
+  },
+];

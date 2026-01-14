@@ -31,6 +31,7 @@ export default function Login() {
     initialValues: {
       email: "",
       password: "",
+      remember_me: false,
     },
     validationSchema: loginSchema,
     mapFieldErrors: mapAuthFieldErrors,
@@ -91,6 +92,8 @@ export default function Login() {
       try {
         const { data } = await api.post("/auth/google/login/", {
           access_token: tokenResponse.access_token,
+          remember_me: formik.values.remember_me,
+
         });
 
         setAuth({
@@ -172,6 +175,28 @@ export default function Login() {
           Resend verification email
         </button>
       )}
+      <div className="flex items-center justify-between mt-3">
+                  <label className="flex items-center cursor-pointer text-[#8D8F8E]">
+  <input
+    type="checkbox"
+    name="remember_me"
+    checked={formik.values.remember_me}
+    onChange={formik.handleChange}
+    className="w-4 h-4 rounded"
+    style={{ accentColor: "#5B687C" }}
+  />
+  <span className="ml-2 text-sm">Remember me</span>
+</label>
+
+
+                  <button
+                    type="button"
+                    className="text-sm font-medium hover:underline text-[#5B687C]"
+                    onClick={() => alert("Forgot password flow not implemented yet")}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
 
       {/* Social login */}
       <div className="flex items-center my-8">

@@ -1,9 +1,16 @@
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiTrash2 } from "react-icons/fi";
 import { classNames } from "../../utils/helpers";
 import StatusPill from "../../components/ui/StatusPill";
 import Skeleton from "../../components/ui/Skeleton";
 
-export default function SessionsCard({ sessions, loading, error, onOpenSession }) {
+
+export default function SessionsCard({
+  sessions,
+  loading,
+  error,
+  onOpenSession,
+  onDeleteSession,
+}) {
   const cardBase = "rounded-2xl bg-white shadow-sm ring-1 ring-gray-100";
 
   return (
@@ -45,7 +52,9 @@ export default function SessionsCard({ sessions, loading, error, onOpenSession }
           </div>
         )}
 
-        {!loading && !error && sessions.map((row) => (
+        {!loading &&
+          !error &&
+          sessions.map((row) => (
             <div
               key={row.id}
               onClick={() => onOpenSession(row.id)}
@@ -59,7 +68,9 @@ export default function SessionsCard({ sessions, loading, error, onOpenSession }
             >
               <div className="col-span-2 text-sm text-gray-700">{row.indexLabel}</div>
               <div className="col-span-4 text-sm text-gray-700">{row.date}</div>
-              <div className="col-span-4"><StatusPill status={row.status} /></div>
+              <div className="col-span-4">
+                <StatusPill status={row.status} />
+              </div>
               <div className="col-span-2 flex justify-end">
                 <button
                   onClick={(e) => {
@@ -70,6 +81,18 @@ export default function SessionsCard({ sessions, loading, error, onOpenSession }
                   title="View session"
                 >
                   <FiEye />
+                </button>
+
+                {/* Delete button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSession(row.id);
+                  }}
+                  className="inline-flex items-center justify-center rounded-full p-2 text-red-600 hover:bg-red-100 cursor-pointer"
+                  title="Delete session"
+                >
+                  <FiTrash2 color="#d33" className="cursor-pointer" />
                 </button>
               </div>
             </div>

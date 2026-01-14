@@ -1,21 +1,30 @@
 import { IoPersonOutline } from "react-icons/io5";
 import { calculateAge, classNames } from "../../utils/helpers";
 
-export default function PatientInfoCard({ patient, patientId, isEditing, onChange }) {
-  const inputBase = "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none transition focus:border-[#3078E2] focus:ring-2 focus:ring-[#3078E2]/20 disabled:bg-gray-50 disabled:text-gray-500 cursor-text";
-  const cardBase = "rounded-2xl bg-white shadow-sm ring-1 ring-gray-100";
-  
+export default function PatientInfoCard({
+  patient,
+  patientId,
+  isEditing,
+  onChange,
+}) {
+  const inputBase =
+    "w-full rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-3 py-2 text-sm text-[rgb(var(--text))] shadow-sm outline-none transition focus:border-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))]/20 disabled:opacity-60 cursor-text";
+
+  const cardBase =
+    "rounded-2xl bg-[rgb(var(--card))] shadow-sm ring-1 ring-[rgb(var(--border))]";
+
   const age = calculateAge(patient.date_of_birth);
 
   return (
     <div className={classNames(cardBase, "p-6 mb-6")}>
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-3 w-full">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#3078E2]/10 shrink-0">
-            <IoPersonOutline size={22} className="text-[#3078E2]" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgb(var(--primary))]/10 shrink-0">
+            <IoPersonOutline size={22} className="text-[rgb(var(--primary))]" />
           </div>
 
           <div className="w-full">
+            {/* Name */}
             {isEditing ? (
               <input
                 name="full_name"
@@ -25,14 +34,15 @@ export default function PatientInfoCard({ patient, patientId, isEditing, onChang
                 className={classNames(inputBase, "max-w-md")}
               />
             ) : (
-              <h1 className="text-2xl font-semibold text-gray-900">
+              <h1 className="text-2xl font-semibold text-[rgb(var(--text))]">
                 {patient.full_name || "Patient"}
               </h1>
             )}
 
+            {/* Gender + DOB */}
             {!isEditing ? (
-              <p className="mt-1 text-sm text-gray-600">
-                {patient.gender || "Gender"}{" "}
+              <p className="mt-1 text-sm text-[rgb(var(--text-muted))]">
+                {patient.gender || "Gender"}
                 {age ? (
                   <>
                     <span className="mx-1">•</span>
@@ -42,17 +52,23 @@ export default function PatientInfoCard({ patient, patientId, isEditing, onChang
               </p>
             ) : (
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
-                <input
+                <select
                   name="gender"
-                  value={patient.gender}
+                  value={patient.gender || ""}
                   onChange={onChange}
-                  placeholder="Gender"
                   className={inputBase}
-                />
+                >
+                  <option value="" disabled>
+                    Select gender
+                  </option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+
                 <input
                   type="date"
                   name="date_of_birth"
-                  value={patient.date_of_birth}
+                  value={patient.date_of_birth || ""}
                   onChange={onChange}
                   className={inputBase}
                 />
@@ -63,8 +79,10 @@ export default function PatientInfoCard({ patient, patientId, isEditing, onChang
 
         {!isEditing && (
           <div className="hidden md:block text-right shrink-0">
-            <div className="text-xs text-gray-500">Patient ID</div>
-            <div className="font-mono text-sm text-gray-800">
+            <div className="text-xs text-[rgb(var(--text-muted))]">
+              Patient ID
+            </div>
+            <div className="font-mono text-sm text-[rgb(var(--text))]">
               {patientId}
             </div>
           </div>

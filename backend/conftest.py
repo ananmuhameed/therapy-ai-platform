@@ -5,9 +5,16 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APIClient
+import os
 
 from therapy_sessions.models import TherapySession, SessionAudio
 from patients.models import Patient
+
+@pytest.fixture(autouse=True, scope="session")
+def _force_mock_providers_for_tests():
+    # CI must never call external APIs
+    os.environ.setdefault("TRANSCRIPTION_PROVIDER", "mock")
+    os.environ.setdefault("USE_MOCK_AI", "1")
 
 
 User = get_user_model()

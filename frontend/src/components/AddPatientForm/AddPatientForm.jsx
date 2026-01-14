@@ -1,12 +1,12 @@
-import React, { useState, useRef } from "react";
-import { useCreatePatient } from "../../queries/patients"; // Assuming you're using React Query here
+import React from "react";
+import { FiX } from "react-icons/fi";
+import { useCreatePatient } from "../../queries/patients";
 import { useAppFormik } from "../../Forms/useAppFormik";
 import {
   patientCreateSchema,
   mapPatientFieldErrors,
   toPatientCreatePayload,
 } from "../../Forms/schemas";
-// import { X } from "react-icons/x";
 
 export default function AddPatientForm({ onClose }) {
   const createPatient = useCreatePatient();
@@ -24,47 +24,51 @@ export default function AddPatientForm({ onClose }) {
     mapFieldErrors: mapPatientFieldErrors,
     onSubmit: async (values) => {
       const payload = toPatientCreatePayload(values);
-      await createPatient.mutateAsync(payload);  // Using React Query for patient creation
-      onClose?.();
+      await createPatient.mutateAsync(payload);
+      onClose?.(true);
     },
   });
 
   const inputBase =
-    "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100";
+    "w-full rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--card))] px-4 py-3 text-sm text-[rgb(var(--text))] placeholder:text-[rgb(var(--text-muted))] outline-none focus:border-[rgb(var(--primary))] focus:ring-2 focus:ring-[rgb(var(--primary))]/20";
 
-  const labelBase = "text-sm font-semibold text-slate-700";
+  const labelBase = "text-sm font-semibold text-[rgb(var(--text))]";
 
   const fieldError = (name) =>
     formik.touched[name] && formik.errors[name] ? (
-      <p className="mt-1 text-xs text-red-600">{formik.errors[name]}</p>
+      <p className="mt-1 text-xs text-red-400">{formik.errors[name]}</p>
     ) : null;
 
   return (
-    <div className="w-[min(92vw,520px)] rounded-2xl bg-white shadow-xl px-6 pt-8 pb-0">
+    <div className="w-full max-w-[520px] rounded-2xl bg-[rgb(var(--card))] border border-[rgb(var(--border))] shadow-xl px-4 sm:px-6 pt-6 sm:pt-8 pb-0 text-[rgb(var(--text))]">
       {/* Header */}
       <div className="relative flex items-center justify-center">
-        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl font-extrabold bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] bg-clip-text text-transparent">
           New Patient
         </h1>
 
-        {/* Close button */}
         <button
-          onClick={onClose}
-          className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose?.(false);
+          }}
+          className="absolute right-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-[rgb(var(--text-muted))] hover:bg-white/5"
+          aria-label="Close"
+          title="Close"
         >
-          {/* <X className="h-5 w-5" /> */}
+          <FiX className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="px-5 pb-6">
-        {/* Non-field/server error */}
+      <div className="px-1 sm:px-5 pb-6">
         {apiError && (
-          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
             {apiError}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={formik.handleSubmit} className="mt-5 space-y-5">
           {/* Full Name */}
           <div>
@@ -87,7 +91,7 @@ export default function AddPatientForm({ onClose }) {
               className={`${inputBase} mt-2`}
               type="email"
               name="email"
-              placeholder="example@examole.com"
+              placeholder="example@example.com"
               value={formik.values.email}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
@@ -98,7 +102,7 @@ export default function AddPatientForm({ onClose }) {
           {/* Phone */}
           <div>
             <label className={labelBase}>Phone Number</label>
-            <div className="mt-2 grid grid-cols-[110px_1fr] gap-3">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-[110px_1fr] gap-3">
               <select
                 className={inputBase}
                 name="countryCode"
@@ -125,7 +129,7 @@ export default function AddPatientForm({ onClose }) {
           </div>
 
           {/* Gender + DOB */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelBase}>Gender</label>
               <select
@@ -162,7 +166,7 @@ export default function AddPatientForm({ onClose }) {
             <textarea
               className={`${inputBase} mt-2 h-24 resize-none`}
               name="notes"
-              placeholder="additional notes"
+              placeholder="Additional notes"
               value={formik.values.notes}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
@@ -174,7 +178,7 @@ export default function AddPatientForm({ onClose }) {
           <button
             type="submit"
             disabled={formik.isSubmitting}
-            className="mt-2 w-full rounded-xl bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] py-4 text-lg font-bold text-white shadow-md hover:brightness-95 disabled:opacity-60"
+            className="mt-2 w-full rounded-xl bg-gradient-to-r from-[#2F76E2] to-[#7FB0F2] py-3 sm:py-4 text-base sm:text-lg font-bold text-white shadow-md hover:brightness-95 disabled:opacity-60"
           >
             {formik.isSubmitting ? "Saving..." : "Save Patient"}
           </button>

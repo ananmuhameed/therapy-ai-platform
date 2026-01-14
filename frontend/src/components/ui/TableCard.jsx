@@ -13,9 +13,9 @@ export default function TableCard({
   skeletonRows = 7,
 }) {
   return (
-    <div className="rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 overflow-hidden">
+    <div className="rounded-2xl bg-[rgb(var(--card))] border border-[rgb(var(--border))] overflow-hidden transition-colors">
       {/* Header */}
-      <div className="grid grid-cols-12 px-4 sm:px-6 py-3 text-xs font-medium text-gray-500 border-b border-gray-100 bg-white">
+      <div className="grid grid-cols-12 px-4 sm:px-6 py-3 text-xs font-medium text-[rgb(var(--text-muted))] border-b border-[rgb(var(--border))] bg-[rgb(var(--card))]">
         {columns.map((c, idx) => (
           <div key={idx} className={c.className}>
             {c.label}
@@ -23,7 +23,7 @@ export default function TableCard({
         ))}
       </div>
 
-      <div className="min-h-[420px] bg-white">
+      <div className="min-h-[420px] bg-[rgb(var(--card))] transition-colors">
         {/* Loading */}
         {loading && (
           <div className="p-4 sm:p-6 space-y-3">
@@ -36,8 +36,8 @@ export default function TableCard({
         {/* Error */}
         {!loading && error && (
           <div className="p-6">
-            <p className="text-sm font-medium text-red-600">{error}</p>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="text-sm font-medium text-red-500">{error}</p>
+            <p className="mt-2 text-sm text-[rgb(var(--text-muted))]">
               Check your token / permissions and the endpoint.
             </p>
           </div>
@@ -46,15 +46,21 @@ export default function TableCard({
         {/* Empty */}
         {!loading && !error && rowsCount === 0 && (
           <div className="p-10 text-center">
-            <p className="text-sm text-gray-700 font-medium">{emptyTitle}</p>
-            <p className="mt-1 text-xs text-gray-500">{emptySubtitle}</p>
+            <p className="text-sm text-[rgb(var(--text))] font-medium">
+              {emptyTitle}
+            </p>
+            <p className="mt-1 text-xs text-[rgb(var(--text-muted))]">
+              {emptySubtitle}
+            </p>
             {emptyActions ? <div className="mt-4">{emptyActions}</div> : null}
           </div>
         )}
 
         {/* Rows */}
         {!loading && !error && rowsCount > 0 && (
-          <div className="divide-y divide-gray-100">{children}</div>
+          <div className="divide-y divide-[rgb(var(--border))]">
+            {children}
+          </div>
         )}
       </div>
     </div>

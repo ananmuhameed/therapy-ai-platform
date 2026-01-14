@@ -30,6 +30,7 @@ export default function Signup() {
       email: "",
       password: "",
       confirmPassword: "",
+      remember_me: false,
     },
     validationSchema: signupSchema,
     mapFieldErrors: mapAuthFieldErrors,
@@ -214,6 +215,19 @@ export default function Signup() {
           {formik.isSubmitting ? "Creating..." : "Create Account"}
         </button>
       </form>
+       <div className="flex items-center justify-between mt-3">
+                  <label className="flex items-center cursor-pointer text-[#8D8F8E]">
+                      <input
+    type="checkbox"
+    name="remember_me"
+    checked={formik.values.remember_me}
+    onChange={formik.handleChange}
+    className="w-4 h-4 rounded"
+    style={{ accentColor: "#5B687C" }}
+  />
+                    <span className="ml-2 text-sm">Remember me</span>
+                  </label>
+        </div>
 
       <div className="flex items-center my-8">
         <div className="flex-grow border-t border-[#5B687C]" />

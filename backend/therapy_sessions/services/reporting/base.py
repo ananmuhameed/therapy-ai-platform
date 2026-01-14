@@ -1,4 +1,3 @@
-# backend/therapy_sessions/services/reporting/base.py
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ShieldCheck, ArrowRight } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import api from "../../api/axiosInstance";
-import { getUser, logout } from "../../auth/storage";
+import { getUser, logout, setUser } from "../../auth/storage";
+import { useNavigate } from "react-router-dom";
 import { useAppFormik } from "../../Forms/useAppFormik";
+
 import {
   therapistProfileSchema,
   toTherapistProfilePayload,
@@ -12,16 +13,18 @@ import {
 import { toast } from "react-toastify";
 import Swal from "sweetalert2";
 
-// Sub-components
 import ProfileHeader from "./ProfileHeader";
 import CredentialsCard from "./CredentialsCard";
 import ExperienceCard from "./ExperienceCard";
 import LocationCard from "./LocationCard";
+import ThemeWrapper from "../../components/ui/ThemeWraper";
 
 export default function TherapistProfile() {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedValues, setSavedValues] = useState(null);
 
   const user = getUser();
 
@@ -46,62 +49,93 @@ export default function TherapistProfile() {
     mapFieldErrors: mapTherapistProfileFieldErrors,
     onSubmit: async (values) => {
       await api.patch("/therapist/profile/", toTherapistProfilePayload(values));
-      setIsEditing(false);
-      toast.success("Profile saved successfully");
     },
   });
 
-
   const isFormValid = formik.isValid;
 
-  // Load profile
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         const { data } = await api.get("/therapist/profile/");
-        formik.setValues((prev) => ({
-          ...prev,
+
+        const nextValues = {
+          ...formik.values,
           specialization: data.specialization || "",
           licenseNumber: data.license_number || "",
           clinicName: data.clinic_name || "",
           city: data.city || "",
           country: data.country || "",
           yearsExperience: data.years_experience || "",
-        }));
+        };
+        formik.setValues(nextValues);
+        setSavedValues(nextValues);
 
-       if (data.is_completed === true) {
-        setIsEditing(false);
-      } else {
+        if (data.is_completed === true) setIsEditing(false);
+        else setIsEditing(true);
+      } catch {
         setIsEditing(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfileData();
+    // eslint-disable-next-line
+  }, []);
+
+  const markAllTouched = () => {
+    formik.setTouched(
+      Object.keys(formik.values).reduce((acc, k) => ({ ...acc, [k]: true }), {}),
+      true
+    );
+  };
+
+  const handleSave = async () => {
+    if (isSaving) return false;
+
+    setIsSaving(true);
+    try {
+      markAllTouched();
+      await formik.submitForm();
+
+      if (Object.keys(formik.errors || {}).length > 0) {
+        toast.error("Please fix the highlighted fields before saving.");
+        return false;
       }
 
-    } catch (error) {
-      console.error("Error loading profile:", error);
-      setIsEditing(true);
+      if (apiError) return false;
+
+      const { data: me } = await api.get("/auth/me/");
+      setUser(me);
+
+      setSavedValues(formik.values);
+      setIsEditing(false);
+      toast.success("Profile saved successfully");
+      return true;
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-    fetchProfileData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const handleCancel = async () => {
+    if (!formik.dirty) {
+      setIsEditing(false);
+      return;
+    }
 
-  // --- Actions ---
-
-  const handleLogout = async () => {
-    const result = await Swal.fire({
-      title: "Log Out?",
-      text: "Are you sure you want to log out?",
-      icon: "question",
-      iconColor: "#3078E2",
-      width: "400px",
+    const res = await Swal.fire({
+      title: "Discard changes?",
+      text: "Your unsaved changes will be lost.",
+      icon: "warning",
+      iconColor: "rgb(var(--primary))",
+      width: "420px",
       padding: "1.5rem",
       showCancelButton: true,
-      confirmButtonColor: "#3078E2",
+      confirmButtonColor: "#64748b",
       cancelButtonColor: "#cbd5e1",
-      confirmButtonText: "Yes",
-      cancelButtonText: "No",
+      confirmButtonText: "Discard",
+      cancelButtonText: "Keep editing",
       reverseButtons: true,
       customClass: {
         popup: "rounded-2xl",
@@ -110,23 +144,35 @@ export default function TherapistProfile() {
       },
     });
 
-    if (result.isConfirmed) {
-      await logout();
-      toast.success("Logged out successfully", { autoClose: 1500 });
-      navigate("/login");
+    if (!res.isConfirmed) return;
+
+    if (savedValues) formik.resetForm({ values: savedValues });
+    else formik.resetForm();
+
+    setIsEditing(false);
+    toast.info("Changes discarded");
+  };
+
+  const handleGoToDashboard = async () => {
+    if (!isEditing || !formik.dirty) {
+      navigate("/dashboard");
+      return;
     }
+
+    const ok = await handleSave();
+    if (ok) navigate("/dashboard");
   };
 
   const handleDelete = async () => {
     const result = await Swal.fire({
-      title: "Delete Profile?",
+      title: "Delete Account?",
       text: "This action is permanent and cannot be undone.",
       icon: "warning",
-      iconColor: "#2563eb",
-      width: "400px",
+      iconColor: "#dc2626",
+      width: "420px",
       padding: "1.5rem",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
+      confirmButtonColor: "#dc2626",
       cancelButtonColor: "#cbd5e1",
       confirmButtonText: "Yes, delete",
       cancelButtonText: "Cancel",
@@ -141,73 +187,65 @@ export default function TherapistProfile() {
     if (result.isConfirmed) {
       try {
         await api.delete("/therapist/profile/");
-        toast.success("Profile deleted successfully", { autoClose: 2000 });
+        toast.success("Account deleted successfully", { autoClose: 1500 });
+
         setTimeout(async () => {
           await logout();
           navigate("/login");
-        }, 2000);
-      } catch (error) {
-        console.error(error);
-        toast.error("Error deleting profile");
+        }, 1500);
+      } catch {
+        toast.error("Error deleting account");
       }
-    }
-  };
-
-  const handleEditToggle = async (e) => {
-    if (e) e.preventDefault();
-
-    if (isEditing) {
-      if (!formik.isValid) {
-        toast.warn("Please fill in all fields before saving.", {
-          position: "top-center",
-          autoClose: 3000,
-        });
-        return;
-      }
-      await formik.submitForm();
-    } else {
-      setIsEditing(true);
     }
   };
 
   const getInputClass = (isError) => {
-    const base = "w-full transition-all duration-200 rounded px-2 py-1 ";
+    const base =
+      "w-full transition-all duration-200 rounded px-2 py-1 bg-transparent text-[rgb(var(--text))] ";
     if (!isEditing)
-      return base + "bg-transparent border-transparent cursor-default pointer-events-none";
+      return (
+        base +
+        "border-transparent cursor-default pointer-events-none"
+      );
+
     return (
       base +
-      `bg-white border ${isError
-        ? "border-red-400 bg-red-50"
-        : "border-gray-300 focus:border-blue-500 outline-none"
+      `border ${
+        isError
+          ? "border-red-500 bg-red-500/10"
+          : "border-[rgb(var(--border))] focus:border-[rgb(var(--primary))] outline-none"
       }`
     );
   };
 
-  if (isLoading)
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading...
-      </div>
+      <ThemeWrapper className="min-h-screen flex items-center justify-center">
+        <span className="text-[rgb(var(--text-muted))]">Loading...</span>
+      </ThemeWrapper>
     );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 font-sans text-slate-800 pb-32">
+    <ThemeWrapper className="min-h-screen p-8 pb-32">
       <ProfileHeader
         user={formik.values}
         isEditing={isEditing}
-        onLogout={handleLogout}
-        onToggleEdit={handleEditToggle}
-        onDelete={handleDelete}
+        isSaving={isSaving}
+        onGoDashboard={handleGoToDashboard}
+        onStartEdit={() => setIsEditing(true)}
+        onSave={handleSave}
+        onCancel={handleCancel}
       />
 
       {apiError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl">
           {apiError}
         </div>
       )}
 
       {isEditing && !isFormValid && (
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl flex items-center gap-2">
+        <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 rounded-xl flex items-center gap-2">
           <ShieldCheck size={20} />
           <span>
             Please fill in <strong>all fields</strong> to continue.
@@ -242,23 +280,15 @@ export default function TherapistProfile() {
         </div>
       </div>
 
-      <div className="flex items-center mt-6 w-fit">
+      <div className="mt-10 flex justify-start">
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
-          disabled={!isFormValid}
-          className={`
-            w-full flex justify-center items-center gap-2 px-6 py-4 rounded-2xl font-normal text-lg transition-all
-            ${isFormValid
-              ? "bg-[#3078E2] text-white hover:bg-blue-700 shadow-lg hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed opacity-70"
-            }
-          `}
+          onClick={handleDelete}
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-red-600 text-white hover:bg-red-700 transition-all shadow-md hover:shadow-lg"
         >
-          <span>Go to Dashboard</span>
-          {isFormValid && <ArrowRight size={20} />}
+          Delete Account
         </button>
       </div>
-    </div>
+    </ThemeWrapper>
   );
 }
