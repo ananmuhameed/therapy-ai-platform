@@ -23,24 +23,46 @@ export const patientCreateSchema = Yup.object({
   countryCode: Yup.string().required("Country code is required"),
 
   phone: Yup.string()
-    .required("Phone number is required")
-    .transform((v) => (v ? v.replace(/\D/g, "") : ""))
-    .test(
-      "len-10-or-11",
-      "Enter an Egyptian mobile number with 10 or 11 digits",
-      (v) => !v || v.length === 10 || v.length === 11
-    )
-    .test(
-      "eg-prefix",
-      "Mobile number must start with 010, 011, 012, or 015",
-      (v) => {
-        if (!v) return false;
-        if (v.length === 11) return /^(010|011|012|015)\d{8}$/.test(v);
-        if (v.length === 10) return /^(10|11|12|15)\d{8}$/.test(v);
-        return false;
-      }
-    ),
+  .required("Phone number is required")
+  .transform((v) => (v ? v.replace(/\D/g, "") : ""))
+  .test("egyptian-mobile", function (v) {
+    if (!v) return false;
 
+    // Case 1: starts with 0 → must be 11 digits
+    if (v.startsWith("0")) {
+      if (v.length !== 11) {
+        return this.createError({
+          message: "Phone numbers must be exactly 11 digits",
+        });
+      }
+
+      if (!/^(010|011|012|015)\d{8}$/.test(v)) {
+        return this.createError({
+          message:
+            "Phone number must start with 010, 011, 012, or 015",
+        });
+      }
+
+      return true;
+    }
+
+    // Case 2: does NOT start with 0 → must be 10 digits
+    if (v.length !== 10) {
+      return this.createError({
+        message:
+          "Enter 10 digits without the leading 0 (example: 1000777620)",
+      });
+    }
+
+    if (!/^(10|11|12|15)\d{8}$/.test(v)) {
+      return this.createError({
+        message:
+          "Phone number must start with 10, 11, 12, or 15",
+      });
+    }
+
+    return true;
+  }),
 
 
   gender: Yup.string()
