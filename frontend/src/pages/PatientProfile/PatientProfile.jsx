@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
-import { formatDate, classNames } from "../../utils/helpers";
+import { formatDate } from "../../utils/helpers";
 import { useDeleteSession } from "../../queries/sessions";
+import { FiTrash2, FiEdit, FiArrowLeft } from "react-icons/fi";
+import { useDeletePatient } from "../../queries/patients";
 
 
-// Icons
-import { FiArrowLeft, FiEdit, FiTrash2, FiCheck, FiX } from "react-icons/fi";
 
 // Components
 import Skeleton from "../../components/ui/Skeleton";
@@ -19,9 +19,9 @@ import Swal from "sweetalert2";
 import { toast } from "react-toastify";
 
 export default function PatientProfile() {
+  const deletePatient = useDeletePatient();
   const navigate = useNavigate();
   const { patientId } = useParams();
-
   
   
   // --- State ---
@@ -34,10 +34,10 @@ export default function PatientProfile() {
     contact_email: "",
     notes: "",
   });
-  
+
   // Snapshot to detect unsaved changes + restore on Cancel
   const [savedPatient, setSavedPatient] = useState(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -45,7 +45,7 @@ export default function PatientProfile() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [sessionsError, setSessionsError] = useState("");
   const deleteSession = useDeleteSession(setSessions);
-  
+
   // --- Helpers ---
   const isDirty = useMemo(() => {
     if (!savedPatient) return false;
@@ -62,7 +62,7 @@ export default function PatientProfile() {
       try {
         const patientRes = await api.get(`/patients/${patientId}/`);
         setPatient(patientRes.data);
-        setSavedPatient(patientRes.data); // ✅ snapshot baseline
+        setSavedPatient(patientRes.data);
 
         setSessionsLoading(true);
         try {
@@ -110,8 +110,8 @@ export default function PatientProfile() {
     if (patientId) fetchPatientAndSessions();
   }, [patientId]);
 
-   const handleDeleteSessionFromPatientProfile = (sessionId) => {
-    deleteSession.mutate(sessionId)
+  const handleDeleteSessionFromPatientProfile = (sessionId) => {
+    deleteSession.mutate(sessionId);
   };
 
   // --- Helpers ---
@@ -149,7 +149,7 @@ export default function PatientProfile() {
 
       const res = await api.patch(`/patients/${patientId}/`, payload);
       setPatient(res.data);
-      setSavedPatient(res.data); // ✅ update snapshot baseline
+      setSavedPatient(res.data);
       setIsEditing(false);
 
       toast.success("Patient profile saved successfully");
@@ -161,11 +161,11 @@ export default function PatientProfile() {
   };
 
   const handleCancel = async () => {
-    // If nothing changed, just exit edit mode
     if (!isDirty) {
       setIsEditing(false);
       return;
     }
+
     const res = await Swal.fire({
       title: "Discard changes?",
       text: "Your unsaved changes will be lost.",
@@ -188,7 +188,6 @@ export default function PatientProfile() {
 
     if (!res.isConfirmed) return;
 
-    // Restore saved snapshot
     if (savedPatient) setPatient(savedPatient);
     setIsEditing(false);
     toast.info("Changes discarded");
@@ -218,7 +217,7 @@ export default function PatientProfile() {
     if (!result.isConfirmed) return;
 
     try {
-      await api.delete(`/patients/${patientId}/`);
+      await deletePatient.mutateAsync(patientId);
       toast.success("Patient deleted successfully");
       navigate("/patients");
     } catch (err) {
@@ -231,7 +230,7 @@ export default function PatientProfile() {
   // --- Render ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+      <div className="min-h-screen bg-[rgb(var(--bg))] p-8">
         <Skeleton className="h-10 w-10 rounded-full mb-6" />
         <Skeleton className="h-32 w-full rounded-2xl mb-6" />
         <Skeleton className="h-32 w-full rounded-2xl mb-6" />
@@ -241,16 +240,16 @@ export default function PatientProfile() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-8">
+      <div className="min-h-screen bg-[rgb(var(--bg))] p-8">
         <div className="mb-6">
           <button
             onClick={() => navigate("/patients")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 hover:bg-gray-50"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--card))] shadow-sm ring-1 ring-[rgb(var(--border))] hover:bg-[rgb(var(--bg-soft))]"
           >
-            <FiArrowLeft size={20} className="text-[#3078E2]" />
+            <FiArrowLeft size={20} className="text-[rgb(var(--primary))]" />
           </button>
         </div>
-        <div className="p-6 bg-white rounded-2xl border border-red-100 text-red-600">
+        <div className="p-6 bg-[rgb(var(--card))] rounded-2xl border border-red-500/20 text-red-500">
           {error}
         </div>
       </div>
@@ -258,16 +257,16 @@ export default function PatientProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="mx-auto max-w-full px-2 sm:px-3 md:px-4 py-8">
         {/* Top Bar */}
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => navigate("/patients")}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[rgb(var(--card))] shadow-sm ring-1 ring-[rgb(var(--border))] hover:bg-[rgb(var(--bg-soft))] cursor-pointer"
             aria-label="Back to patients"
           >
-            <FiArrowLeft size={20} className="text-[#3078E2]" />
+            <FiArrowLeft size={20} className="text-[rgb(var(--primary))]" />
           </button>
 
           <div className="flex gap-2">
@@ -328,6 +327,7 @@ export default function PatientProfile() {
             error={sessionsError}
             onOpenSession={(id) => navigate(`/sessions/${id}`)}
             onDeleteSession={handleDeleteSessionFromPatientProfile}
+            onCreateSession={() => navigate(`/sessions/new?patientId=${patientId}`)}
           />
 
           <NotesCard
@@ -339,9 +339,9 @@ export default function PatientProfile() {
 
         {/* Bottom hint */}
         {isEditing && (
-          <div className="mt-6 text-xs text-gray-500">
-            Tip: Don’t forget to hit <span className="font-semibold">Save</span>
-            .
+          <div className="mt-6 text-xs text-[rgb(var(--text-muted))]">
+            Tip: Don’t forget to hit{" "}
+            <span className="font-semibold text-[rgb(var(--text))]">Save</span>.
           </div>
         )}
       </div>
