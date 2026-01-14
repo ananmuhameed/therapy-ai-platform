@@ -65,7 +65,6 @@ export default function SessionPage() {
     if (exists) {
       setSelectedPatientId(String(pid));
 
-      // optional: clean URL so it doesn't force selection again
       params.delete("patientId");
       navigate(
         { pathname: location.pathname, search: params.toString() },
@@ -74,7 +73,6 @@ export default function SessionPage() {
     } else {
       setUploadError("Selected patient not found or not accessible.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientsLoading, patients, location.search]);
 
 

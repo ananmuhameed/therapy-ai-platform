@@ -15,7 +15,7 @@ export default function PatientsControls({
       totalLabel={totalLabel}
       searchValue={search}
       onSearchChange={onSearchChange}
-      searchPlaceholder="Search by name…"
+      searchPlaceholder="Search by name, national ID, or phone…"
       filterValue={filterGender}
       onFilterChange={onFilterGenderChange}
       filterPlaceholder="All genders"

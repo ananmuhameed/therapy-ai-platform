@@ -23,12 +23,16 @@ export default function PatientSelector({ patients = [], selectedId, onChange })
 
   const filteredPatients = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     return patients.filter((p) => {
       const name = (p.name || p.full_name || p.fullName || "").toLowerCase();
       const phone = (p.contact_phone || p.contactPhone || "").toLowerCase();
-      return !q || name.includes(q) || phone.includes(q);
+      const nationalId = (p.patient_id || p.patientId || "").toLowerCase(); // <- add this
+
+      return !q || name.includes(q) || phone.includes(q) || nationalId.includes(q);
     });
   }, [patients, search]);
+
 
   const selectedPatient = useMemo(
     () => patients.find((p) => String(p.id) === String(selectedId)),
@@ -57,9 +61,8 @@ export default function PatientSelector({ patients = [], selectedId, onChange })
 
         <FiChevronDown
           size={18}
-          className={`ml-2 text-[rgb(var(--text-muted))] pointer-events-none transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
+          className={`ml-2 text-[rgb(var(--text-muted))] pointer-events-none transition-transform ${open ? "rotate-180" : ""
+            }`}
         />
       </div>
 
@@ -90,9 +93,8 @@ export default function PatientSelector({ patients = [], selectedId, onChange })
                     setOpen(false);
                     setSearch("");
                   }}
-                  className={`w-full text-left px-5 py-3 hover:bg-black/5 transition-colors ${
-                    isSelected ? "bg-black/5" : ""
-                  }`}
+                  className={`w-full text-left px-5 py-3 hover:bg-black/5 transition-colors ${isSelected ? "bg-black/5" : ""
+                    }`}
                 >
                   <p className="text-sm font-medium text-[rgb(var(--text))]">
                     {label}
@@ -101,6 +103,11 @@ export default function PatientSelector({ patients = [], selectedId, onChange })
                   {(p.contact_phone || p.contactPhone) && (
                     <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
                       {p.contact_phone || p.contactPhone}
+                    </p>
+                  )}
+                  {search.trim() && (p.patient_id || p.patientId) && (
+                    <p className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
+                      National ID: {p.patient_id || p.patientId}
                     </p>
                   )}
                 </button>

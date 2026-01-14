@@ -27,9 +27,16 @@ export default function AddPatientForm({ onClose }) {
       console.log("SUBMIT", values);
       const payload = toPatientCreatePayload(values);
       console.log("PAYLOAD", payload);
-      await createPatient.mutateAsync(payload);
-      onClose?.(true);
+
+      try {
+        await createPatient.mutateAsync(payload);
+        onClose?.(true);
+      } catch (err) {
+        console.log("API ERROR:", err?.response?.data);
+        throw err;
+      }
     },
+
   });
 
   const inputBase =

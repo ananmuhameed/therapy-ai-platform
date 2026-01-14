@@ -88,15 +88,27 @@ export default function PatientsListPage() {
   }, []);
 
   const filteredPatients = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const g = String(filterGender).toLowerCase();
+  const q = search.trim().toLowerCase();
+  const g = String(filterGender).toLowerCase();
 
-    return (patients || []).filter((p) => {
-      const name = String(p.full_name || p.name || "").toLowerCase();
-      const gender = String(p.gender || "").toLowerCase();
-      return (!q || name.includes(q)) && (g === "all" || gender === g);
-    });
-  }, [patients, search, filterGender]);
+  return (patients || []).filter((p) => {
+    const name = String(p.full_name || p.name || "").toLowerCase();
+    const phone = String(p.contact_phone || p.contactPhone || "").toLowerCase();
+    const nationalId = String(p.patient_id || p.patientId || "").toLowerCase();
+    const gender = String(p.gender || "").toLowerCase();
+
+    const matchesSearch =
+      !q ||
+      name.includes(q) ||
+      phone.includes(q) ||
+      nationalId.includes(q);
+
+    const matchesGender = g === "all" || gender === g;
+
+    return matchesSearch && matchesGender;
+  });
+}, [patients, search, filterGender]);
+
 
   const lastSessionByPatientId = useMemo(() => {
     const map = new Map();
