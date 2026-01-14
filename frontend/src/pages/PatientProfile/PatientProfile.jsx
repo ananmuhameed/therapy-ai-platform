@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
-import { formatDate, classNames } from "../../utils/helpers";
+import { formatDate } from "../../utils/helpers";
 import { useDeleteSession } from "../../queries/sessions";
+import { FiTrash2, FiEdit, FiArrowLeft } from "react-icons/fi";
 
-
-// Icons
-import { FiArrowLeft, FiEdit, FiTrash2, FiCheck, FiX } from "react-icons/fi";
 
 // Components
 import Skeleton from "../../components/ui/Skeleton";
@@ -21,7 +19,6 @@ import { toast } from "react-toastify";
 export default function PatientProfile() {
   const navigate = useNavigate();
   const { patientId } = useParams();
-
   
   
   // --- State ---
@@ -62,7 +59,7 @@ export default function PatientProfile() {
       try {
         const patientRes = await api.get(`/patients/${patientId}/`);
         setPatient(patientRes.data);
-        setSavedPatient(patientRes.data); // ✅ snapshot baseline
+        setSavedPatient(patientRes.data); 
 
         setSessionsLoading(true);
         try {
@@ -149,7 +146,7 @@ export default function PatientProfile() {
 
       const res = await api.patch(`/patients/${patientId}/`, payload);
       setPatient(res.data);
-      setSavedPatient(res.data); // ✅ update snapshot baseline
+      setSavedPatient(res.data);
       setIsEditing(false);
 
       toast.success("Patient profile saved successfully");
@@ -328,6 +325,7 @@ export default function PatientProfile() {
             error={sessionsError}
             onOpenSession={(id) => navigate(`/sessions/${id}`)}
             onDeleteSession={handleDeleteSessionFromPatientProfile}
+            onCreateSession={() => navigate(`/sessions/new?patientId=${patientId}`)}
           />
 
           <NotesCard

@@ -1,7 +1,9 @@
+import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import TherapistProfile, EmailVerification
 from .serializers import RegisterSerializer, TherapistProfileUpdateSerializer, UserPublicSerializer, TherapistProfileSerializer
@@ -9,6 +11,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 from .tasks import send_verification_email
+from django.shortcuts import get_object_or_404
+
 
 
 User = get_user_model()
@@ -23,16 +27,17 @@ class RegisterView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
-
-        # Remove any old tokens
         EmailVerification.objects.filter(user=user).delete()
 
         verification = EmailVerification.objects.create(
-            user=user,
-            expires_at=timezone.now() + timedelta(minutes=25),
+        user=user,
+        expires_at=timezone.now() + timedelta(minutes=25),
         )
 
-        send_verification_email.delay(user.email, str(verification.token))
+        send_verification_email.delay(
+         user.email,
+         str(verification.token),
+         )
 
         return Response(
             {
@@ -109,38 +114,19 @@ class VerifyEmailView(APIView):
     def post(self, request):
         token = request.data.get("token")
 
-        if not token:
-            return Response(
-                {"detail": "Token is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            verification = EmailVerification.objects.get(token=token)
-        except EmailVerification.DoesNotExist:
-            return Response(
-                {"detail": "Invalid verification token"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        verification = get_object_or_404(
+            EmailVerification,
+            token=token,
+            used=False,
+            expires_at__gt=timezone.now()
+        )
 
         user = verification.user
+        user.is_verified = True
+        user.save()
 
-        # If expired
-        if verification.expires_at < timezone.now():
-            return Response(
-                {"detail": "Verification link has expired"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Mark user verified if not already
-        if not user.is_verified:
-            user.is_verified = True
-            user.save(update_fields=["is_verified"])
-
-        # Cleanup token
         verification.used = True
         verification.save()
-        verification.delete()
 
         refresh = RefreshToken.for_user(user)
 
@@ -148,10 +134,6 @@ class VerifyEmailView(APIView):
             "access": str(refresh.access_token),
             "user": UserPublicSerializer(user).data,
         })
-
-
-
-
 # =========================
 # RESEND VERIFICATION
 # =========================
@@ -180,12 +162,13 @@ class ResendVerificationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Delete old tokens
-        EmailVerification.objects.filter(user=user).delete()
-
-        verification = EmailVerification.objects.create(
+        verification, _ = EmailVerification.objects.update_or_create(
             user=user,
-            expires_at=timezone.now() + timedelta(minutes=30),
+            defaults={
+                "token": uuid.uuid4(),
+                "expires_at": timezone.now() + timedelta(minutes=30),
+                "used": False,
+            },
         )
 
         send_verification_email.delay(user.email, str(verification.token))
