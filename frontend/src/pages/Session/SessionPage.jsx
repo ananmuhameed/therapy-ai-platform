@@ -53,10 +53,6 @@ export default function SessionPage() {
 
   // Fetch patients
   const { data: patients = [], isLoading: patientsLoading } = usePatients();
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const pid = params.get("patientId");
-    if (!pid) return;
 
   // Read patientId from query params once patients are loaded
   useEffect(() => {
@@ -150,10 +146,8 @@ export default function SessionPage() {
     setLastSessionId(null);
 
     try {
-      // 1) create session (FormData)
       const { data: session } = await createSessionFormData({ patientId });
 
-      // 2) upload audio
       await uploadFileAudio({
         sessionId: session.id,
         file,
@@ -189,17 +183,14 @@ export default function SessionPage() {
     setFinalizeMsg("");
 
     try {
-      // 1) create session first (so we have sessionId)
       const { data: session } = await createSessionFormData({
         patientId: selectedPatientId,
       });
       currentSessionIdRef.current = session.id;
 
-      // 2) prepare chunk source
       const source = createRecordingChunkSource();
       sourceRef.current = source;
 
-      // 3) start upload runner (it will wait for chunks)
       const uploadTask = uploadRecordingAudio({
         sessionId: session.id,
         filename: `recording_${Date.now()}.webm`,
@@ -207,9 +198,9 @@ export default function SessionPage() {
         getNextChunk: source.getNextChunk,
       });
 
-      // support either Promise OR { promise, cancel }
       let uploadPromise = uploadTask;
       cancelUploadRef.current = null;
+
       if (
         uploadTask &&
         typeof uploadTask === "object" &&
@@ -221,7 +212,6 @@ export default function SessionPage() {
         }
       }
 
-      // 4) start recorder
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       setMicStream(stream);
@@ -237,7 +227,6 @@ export default function SessionPage() {
       };
 
       recorder.onstop = async () => {
-        // stop mic + close chunk source
         stopMicStream();
         source.markDone();
 
@@ -248,7 +237,6 @@ export default function SessionPage() {
         } catch (err) {
           console.error(err);
           setUploadError(err?.message || "Failed to upload recording.");
-          // bring UI back so user can retry/cancel
           setIsRecorderVisible(true);
         } finally {
           setIsRecording(false);
@@ -258,7 +246,6 @@ export default function SessionPage() {
         }
       };
 
-      // collect chunks every 5s
       recorder.start(5000);
     } catch (err) {
       console.error(err);
@@ -287,7 +274,6 @@ export default function SessionPage() {
     setIsPaused(false);
     pauseTimer();
 
-    // flush last chunk then stop
     try {
       if (r.state === "recording") r.requestData();
     } catch {}
@@ -319,9 +305,7 @@ export default function SessionPage() {
     }
   };
 
-  // Cancel recording (stop and delete session)
   const cancelRecording = async () => {
-    // stop UI immediately
     setIsFinalizing(false);
     setFinalizeMsg("");
     setIsRecorderVisible(false);
@@ -330,19 +314,17 @@ export default function SessionPage() {
     setUploadError("");
     resetTimer();
 
-    // stop recorder safely
     const r = mediaRecorderRef.current;
     try {
       if (r && r.state !== "inactive") {
         r.ondataavailable = null;
-        r.onstop = null; // prevent navigation/upload finalize
+        r.onstop = null;
         r.stop();
       }
     } catch {}
 
     stopMicStream();
 
-    // end chunk source + cancel upload if supported
     try {
       sourceRef.current?.markDone?.();
     } catch {}
@@ -350,16 +332,13 @@ export default function SessionPage() {
       cancelUploadRef.current?.();
     } catch {}
 
-    // capture session id before clearing
     const sid = currentSessionIdRef.current;
 
-    // cleanup refs
     mediaRecorderRef.current = null;
     sourceRef.current = null;
     cancelUploadRef.current = null;
     currentSessionIdRef.current = null;
 
-    // cleanup backend session
     if (sid) {
       try {
         await api.delete(`/sessions/${sid}/`);
