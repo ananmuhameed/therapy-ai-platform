@@ -1,90 +1,183 @@
-import { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Rewind, FastForward, Volume2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { Play, Pause, Volume2 } from "lucide-react";
 
-const AudioPlayer = ({ audioUrl }) => {
+export default function AudioPlayer({ audioUrl }) {
+  const audioRef = useRef(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
   const [speed, setSpeed] = useState(1);
-  const audioRef = useRef(null);
 
-  const togglePlay = () => {
-    if (isPlaying) audioRef.current.pause();
-    else audioRef.current.play();
-    setIsPlaying(!isPlaying);
+  // Helper: set duration safely
+  const updateDuration = (audio) => {
+    const d = audio?.duration;
+    setDuration(Number.isFinite(d) ? d : 0);
   };
 
-  const handleTimeUpdate = () => {
-    setCurrentTime(audioRef.current.currentTime);
+  /* ---------- AUDIO EVENTS ---------- */
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    // Reset UI for new audio source
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+
+    const fixInfinityDuration = async () => {
+      // WebM/Opus sometimes gives Infinity until you force a seek
+      if (audio.duration === Infinity) {
+        try {
+          audio.currentTime = 1e101; // jump far to force duration calculation
+          await new Promise((r) => setTimeout(r, 60));
+          audio.currentTime = 0;
+        } catch {}
+      }
+    };
+
+    const onLoadedMetadata = async () => {
+      await fixInfinityDuration();
+      updateDuration(audio);
+    };
+
+    const onDurationChange = () => updateDuration(audio);
+
+    const onEnded = () => {
+      setCurrentTime(audio.duration || currentTime);
+      setIsPlaying(false);
+    };
+
+    const onPlay = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("durationchange", onDurationChange);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+
+    // Also apply persisted controls
+    audio.volume = volume;
+    audio.playbackRate = speed;
+
+    return () => {
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("durationchange", onDurationChange);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+    };
+    // IMPORTANT: re-run when audioUrl changes
+  }, [audioUrl]); // ✅ not []
+
+  /* ---------- CONTROLS ---------- */
+  const togglePlay = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    try {
+      if (audio.paused) {
+        await audio.play();
+      } else {
+        audio.pause();
+      }
+    } catch (e) {
+      // autoplay restrictions / decode errors
+      console.error("Audio play failed:", e);
+      setIsPlaying(false);
+    }
   };
 
-  const handleLoadedMetadata = () => {
-    setDuration(audioRef.current.duration);
+  const handleSeek = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const value = Number(e.target.value);
+    audio.currentTime = value;
+    setCurrentTime(value);
   };
 
-  const formatTime = (time) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  const handleVolume = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const value = Number(e.target.value);
+    audio.volume = value;
+    setVolume(value);
   };
+
+  const handleSpeed = (e) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const value = Number(e.target.value);
+    audio.playbackRate = value;
+    setSpeed(value);
+  };
+
+  const max = duration > 0 ? duration : 0;
 
   return (
-    <div className="w-full max-w-3xl mx-auto mb-8">
-      <h3 className="text-gray-500 text-sm font-medium mb-4 uppercase">Audio</h3>
-      
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
+    <div className="space-y-4">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+
+      {/* Play + Progress */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={togglePlay}
+          className="p-2 rounded-full border border-gray-200 hover:bg-gray-100"
+          type="button"
+        >
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+
+        <input
+          type="range"
+          min="0"
+          max={max}
+          step="0.1"
+          value={Math.min(currentTime, max)}
+          onChange={handleSeek}
+          className="flex-1"
         />
 
-        {/* Progress Bar */}
-        <div className="relative w-full h-1 bg-gray-200 rounded-full mb-4 cursor-pointer">
-          <div 
-            className="absolute top-0 left-0 h-full bg-blue-500 rounded-full"
-            style={{ width: `${(currentTime / duration) * 100}%` }}
-          />
-          <div 
-            className="absolute top-1/2 -mt-1.5 h-3 w-3 bg-blue-500 rounded-full shadow"
-            style={{ left: `${(currentTime / duration) * 100}%` }}
+        <span className="text-xs text-gray-400 w-20 text-right">
+          {Math.floor(currentTime)}s / {Math.floor(duration)}s
+        </span>
+      </div>
+
+      {/* Volume + Speed */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Volume2 size={16} className="text-gray-400" />
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={handleVolume}
           />
         </div>
 
-        {/* Controls Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button className="text-gray-400 hover:text-blue-500">
-              <Rewind size={20} />
-            </button>
-            <button 
-              onClick={togglePlay}
-              className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-blue-600 transition"
-            >
-              {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
-            </button>
-            <button className="text-gray-400 hover:text-blue-500">
-              <FastForward size={20} />
-            </button>
-            
-            <span className="text-xs text-gray-500 font-medium ml-2">
-              {formatTime(currentTime)} <span className="mx-1 text-gray-300">/</span> {formatTime(duration || 45 * 60)}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center px-3 py-1 bg-gray-50 rounded-full border border-gray-200 text-xs text-gray-600">
-              <span>{speed}</span>
-              <X size={10} className="mx-1" />
-              <span>Speed</span>
-            </div>
-            <Volume2 size={20} className="text-blue-500" />
-          </div>
-        </div>
+        <select
+          value={speed}
+          onChange={handleSpeed}
+          className="border border-gray-200 rounded px-2 py-1 text-xs"
+        >
+          <option value="0.75">0.75×</option>
+          <option value="1">1×</option>
+          <option value="1.25">1.25×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
       </div>
     </div>
   );
-};
-
-export default AudioPlayer;
+}

@@ -15,6 +15,12 @@ import SessionsPage from "./pages/SessionsList/SessionsPage";
 import ReportsPage from "./pages/Report/ReportsPage";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import VerifyEmail from "./pages/VerifyEmail/VerifyEmail";
+import Home from "../Home/pages/Home/Home";
+import LandingLayout from "../Home/Layout/Landinglayout";
+import FeaturesPage from "../Home/pages/Features/FeaturesPage";
+import Plans from "../Home/pages/Plans/Plans";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 
 function App() {
@@ -27,31 +33,108 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* Landing Layout */}
+        <Route element={<LandingLayout />}>
+          <Route path="/" element={<Navigate to="/home" />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/plans" element={<Plans />} />
+          <Route path="/home" element={<Home />} />
+        </Route>
+
+        {/* Auth */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/patients/:patientId" element={<PatientProfile />} />
-        <Route path="/therapistprofile" element={<TherapistProfile />} />
-        <Route path="/sessions/:sessionId" element={<SessionDetailsPage />} />
-        <Route element={<MainLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/sessions/new" element={<Session />} />
-          <Route path="/patients" element={<PatientsListPage />} />
-          <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
+        {/* Protected Standalone Pages */}
+        <Route
+          path="/patients/:patientId"
+          element={
+            <ProtectedRoute>
+              <PatientProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/therapistprofile"
+          element={
+            <ProtectedRoute>
+              <TherapistProfile />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sessions/:sessionId"
+          element={
+            <ProtectedRoute>
+              <SessionDetailsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Main App Layout */}
+        <Route element={<MainLayout />}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/sessions/new"
+            element={
+              <ProtectedRoute>
+                <Session />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/patients"
+            element={
+              <ProtectedRoute>
+                <PatientsListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/sessions"
+            element={
+              <ProtectedRoute>
+                <SessionsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <ReportsPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
+
       </Routes>
+
       <ToastContainer
-  position="top-right"
-  autoClose={3000}
-  hideProgressBar={false}
-  closeOnClick
-  pauseOnHover
-  draggable
-  style={{ zIndex: 999999 }}
-/>
-      </>
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        closeOnClick
+        pauseOnHover
+        draggable
+        style={{ zIndex: 999999 }}
+      />
+    </>
   );
 }
 

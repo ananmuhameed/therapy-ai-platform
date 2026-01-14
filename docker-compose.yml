@@ -1,4 +1,4 @@
-  # version: "3.9"
+# version: "3.9"
 
 services:
   db:
@@ -24,7 +24,8 @@ services:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
 
-  backend:
+  # Django Web Server
+  backend_web:
     env_file:
       - .env
     build: ./backend
@@ -39,7 +40,12 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
-
+      OPENAI_API_KEY: ${OPENAI_API_KEY}   # OpenAI API key for transcription
+      USE_S3: ${USE_S3}
+      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
+      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
 
@@ -52,16 +58,16 @@ services:
       - db
       - redis
 
+  # Celery Worker (Handles Background Tasks)
   celery_worker:
     env_file:
       - .env
     build:
       context: ./backend
-      dockerfile: Dockerfile.worker
-    command: celery -A core worker -l info --pool=solo --concurrency=1 --prefetch-multiplier=1
+      dockerfile: Dockerfile  # Use the worker Dockerfile if we want to run a separate worker
+    command: celery -A core worker --loglevel=info --pool=solo --concurrency=1 --prefetch-multiplier=1
     volumes:
       - ./backend:/app
-      - hf_cache:${WHISPER_CACHE_DIR}
     environment:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
@@ -71,23 +77,16 @@ services:
     
       CELERY_BROKER_URL: ${CELERY_BROKER_URL}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND}
-      
-      USE_S3: ${USE_S3}
-      AWS_STORAGE_BUCKET_NAME: ${AWS_STORAGE_BUCKET_NAME}
-      AWS_S3_REGION_NAME: ${AWS_S3_REGION_NAME}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      TRANSCRIPTION_PROVIDER: ${TRANSCRIPTION_PROVIDER}
-      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE}
     depends_on:
       - db
       - redis
 
+  # Celery Beat (For periodic tasks, e.g., scheduled report generation)
   celery_beat:
     env_file:
       - .env
     build: ./backend
-    command: celery -A core beat -l info
+    command: celery -A core beat -l info  # Celery Beat command for periodic tasks
     volumes:
       - ./backend:/app
     environment:
@@ -102,6 +101,7 @@ services:
       - db
       - redis
 
+  # Frontend (Optional, for serving the frontend part of the application)
   frontend:
     build: ./frontend
     command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
@@ -111,7 +111,7 @@ services:
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      - backend_web
 
 volumes:
   postgres_data:

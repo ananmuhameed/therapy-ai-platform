@@ -53,3 +53,24 @@
   width: auto !important;
   min-width: 300px;
 }
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: 255 255 255;
+  --bg-secondary: 248 250 252;
+  --card: 255 255 255;
+  --border: 226 232 240;
+  --text: 15 23 42;
+  --text-muted: 100 116 139;
+  --primary: 48 120 226;
+}
+
+.dark {
+  --bg: 2 6 23;
+  --bg-secondary: 15 23 42;
+  --card: 2 6 23;
+  --border: 30 41 59;
+  --text: 241 245 249;
+  --text-muted: 148 163 184;
+  --primary: 96 165 250;
+}
