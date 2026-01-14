@@ -27,6 +27,8 @@ class RegisterView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
+        EmailVerification.objects.filter(user=user).delete()
+
         verification = EmailVerification.objects.create(
         user=user,
         expires_at=timezone.now() + timedelta(minutes=25),
@@ -36,16 +38,6 @@ class RegisterView(APIView):
          user.email,
          str(verification.token),
          )
-
-        # Remove any old tokens
-        EmailVerification.objects.filter(user=user).delete()
-
-        verification = EmailVerification.objects.create(
-            user=user,
-            expires_at=timezone.now() + timedelta(minutes=25),
-        )
-
-        send_verification_email.delay(user.email, str(verification.token))
 
         return Response(
             {
@@ -146,7 +138,7 @@ class VerifyEmailView(APIView):
 # RESEND VERIFICATION
 # =========================
 class ResendVerificationView(APIView):
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get("email")
@@ -179,7 +171,7 @@ class ResendVerificationView(APIView):
             },
         )
 
-        send_verification_email.delay(user.email, verification.token)
+        send_verification_email.delay(user.email, str(verification.token))
 
         return Response(
             {"detail": "Verification email resent"},
